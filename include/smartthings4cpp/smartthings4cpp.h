@@ -11,6 +11,9 @@
 #include "smartthings4cpp/exceptions.h"
 #include "smartthings4cpp/http_client.h"
 #include "smartthings4cpp/json_utils.h"
+#include "smartthings4cpp/capability.h"
+#include "smartthings4cpp/capabilities.h"
+#include "smartthings4cpp/component.h"
 #include "smartthings4cpp/client.h"
 #include "smartthings4cpp/device.h"
 

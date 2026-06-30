@@ -1,4 +1,5 @@
 #include "smartthings4cpp/device.h"
+#include "smartthings4cpp/client.h"
 #include "smartthings4cpp/json_utils.h"
 
 #include <unordered_set>
@@ -15,14 +16,37 @@ namespace smartthings4cpp {
 		return _components;
 	}
 
+	Component* Device::getComponent(const std::string& id) {
+		for (auto& component : _components) {
+			if (component.id == id) {
+				return &component;
+			}
+		}
+		return nullptr;
+	}
+
+	Capability* Device::getCapability(const std::string& capabilityId, const std::string& component) {
+		Component* c = getComponent(component);
+		return c ? c->get(capabilityId) : nullptr;
+	}
+
+	bool Device::hasCapability(const std::string& capabilityId) const {
+		for (const auto& component : _components) {
+			if (component.has(capabilityId)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	std::vector<std::string> Device::getCapabilityIds() const {
 		std::vector<std::string> ids;
 		std::unordered_set<std::string> seen;
 
 		for (const auto& component : _components) {
 			for (const auto& capability : component.capabilities) {
-				if (seen.insert(capability.id).second) {
-					ids.push_back(capability.id);
+				if (capability && seen.insert(capability->capabilityId()).second) {
+					ids.push_back(capability->capabilityId());
 				}
 			}
 		}
@@ -30,20 +54,34 @@ namespace smartthings4cpp {
 		return ids;
 	}
 
-	bool Device::hasCapability(const std::string& capability_id) const {
-		for (const auto& component : _components) {
-			for (const auto& capability : component.capabilities) {
-				if (capability.id == capability_id) {
-					return true;
+	Result<void> Device::refreshStatus() {
+		if (!_client) {
+			return Result<void>(ErrorCode::InvalidParameter, "No client associated with device");
+		}
+
+		auto status = _client->getDeviceStatus(_id);
+		if (status.is_null() || !status.is_object() || !status.contains("components")
+			|| !status["components"].is_object()) {
+			return Result<void>(ErrorCode::NetworkError, "Failed to fetch device status");
+		}
+
+		const auto& components = status["components"];
+		for (auto& component : _components) {
+			if (!components.contains(component.id) || !components[component.id].is_object()) {
+				continue;
+			}
+			const auto& componentStatus = components[component.id];
+			for (auto& capability : component.capabilities) {
+				if (capability && componentStatus.contains(capability->capabilityId())) {
+					capability->updateStatus(componentStatus[capability->capabilityId()]);
 				}
 			}
 		}
-		return false;
+
+		return Result<void>();
 	}
 
 	void Device::initFromJson(const nlohmann::json& json) {
-		// Core metadata. deviceId may already have been set via the constructor;
-		// prefer the value reported in the payload when present.
 		std::string id = json_utils::getValueOr<std::string>(json, "deviceId", _id);
 		if (!id.empty()) {
 			_id = id;
@@ -63,7 +101,7 @@ namespace smartthings4cpp {
 		_roomId = json_utils::getValueOr<std::string>(json, "roomId", "");
 		_presentationId = json_utils::getValueOr<std::string>(json, "presentationId", "");
 
-		// Components -> capabilities / categories
+		// Components -> capability objects (built via the factory)
 		_components.clear();
 		if (json.contains("components") && json["components"].is_array()) {
 			for (const auto& component_json : json["components"]) {
@@ -74,11 +112,12 @@ namespace smartthings4cpp {
 				if (component_json.contains("capabilities")
 					&& component_json["capabilities"].is_array()) {
 					for (const auto& capability_json : component_json["capabilities"]) {
-						Capability capability;
-						capability.id = json_utils::getValueOr<std::string>(capability_json, "id", "");
-						capability.version = json_utils::getValueOr<int>(capability_json, "version", 1);
-						if (!capability.id.empty()) {
-							component.capabilities.push_back(std::move(capability));
+						std::string capabilityId =
+							json_utils::getValueOr<std::string>(capability_json, "id", "");
+						int version = json_utils::getValueOr<int>(capability_json, "version", 1);
+						if (!capabilityId.empty()) {
+							component.capabilities.push_back(
+								createCapability(capabilityId, version, component.id, _id, _client));
 						}
 					}
 				}

@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "smartthings4cpp/device.h"
+#include "smartthings4cpp/capabilities.h"
 #include "smartthings4cpp/json_utils.h"
 
 using namespace smartthings4cpp;
@@ -48,7 +49,7 @@ TEST_CASE("Device::initFromJson populates metadata properties", "[device]") {
 	REQUIRE(device.PresentationId.Get() == "PRES-123");
 }
 
-TEST_CASE("Device::initFromJson parses components and capabilities", "[device]") {
+TEST_CASE("Device::initFromJson builds components and capability objects", "[device]") {
 	Device device;
 	device.initFromJson(json_utils::parse(kDeviceJson));
 
@@ -56,15 +57,15 @@ TEST_CASE("Device::initFromJson parses components and capabilities", "[device]")
 	REQUIRE(components.size() == 1);
 	REQUIRE(components[0].id == "main");
 	REQUIRE(components[0].capabilities.size() == 3);
-	REQUIRE(components[0].capabilities[0].id == "switch");
-	REQUIRE(components[0].capabilities[0].version == 1);
+	REQUIRE(components[0].capabilities[0]->capabilityId() == "switch");
+	REQUIRE(components[0].capabilities[0]->Version.Get() == 1);
 
 	REQUIRE(components[0].categories.size() == 1);
 	REQUIRE(components[0].categories[0].name == "Light");
 	REQUIRE(components[0].categories[0].categoryType == "manufacturer");
 }
 
-TEST_CASE("Device capability helpers work across components", "[device]") {
+TEST_CASE("Device capability lookup helpers work", "[device]") {
 	Device device;
 	device.initFromJson(json_utils::parse(kDeviceJson));
 
@@ -75,6 +76,18 @@ TEST_CASE("Device capability helpers work across components", "[device]") {
 	REQUIRE(device.hasCapability("switch"));
 	REQUIRE(device.hasCapability("switchLevel"));
 	REQUIRE_FALSE(device.hasCapability("colorControl"));
+
+	// By id
+	REQUIRE(device.getComponent("main") != nullptr);
+	REQUIRE(device.getCapability("switch") != nullptr);
+	REQUIRE(device.getCapability("colorControl") == nullptr);
+
+	// By type
+	auto* sw = device.getCapability<Switch>();
+	REQUIRE(sw != nullptr);
+	REQUIRE(sw->capabilityId() == "switch");
+	REQUIRE(device.getCapability<SwitchLevel>() != nullptr);
+	REQUIRE(device.getCapability<AudioVolume>() == nullptr);
 }
 
 TEST_CASE("Device label falls back to name when label is absent", "[device]") {
@@ -110,4 +123,8 @@ TEST_CASE("Device::getCapabilityIds de-duplicates across components", "[device]"
 	auto ids = device.getCapabilityIds();
 	REQUIRE(ids.size() == 1);
 	REQUIRE(ids[0] == "switch");
+
+	// Same-id capability resolves per component.
+	REQUIRE(device.getCapability<Switch>("main") != nullptr);
+	REQUIRE(device.getCapability<Switch>("outlet1") != nullptr);
 }

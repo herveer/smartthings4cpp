@@ -8,19 +8,27 @@ Samsung **SmartThings** public API.
 **smartthings4cpp** is a cross-platform C++ library designed to make working with
 the SmartThings cloud simple and intuitive. 
 
-> **Project status:** 🚧 Under active development. This first iteration covers
-> **authentication and device discovery**. Device control (commands, live status)
-> is the next iteration — see [ROADMAP.md](ROADMAP.md).
+> **Project status:** 🚧 Under active development. Authentication, device discovery,
+> and typed **device control** for a first batch of capabilities are implemented.
+> See [ROADMAP.md](ROADMAP.md) for the remaining capabilities and upcoming work.
 
-## Features (iteration 1)
+## Features
 
 - 🔐 **Token authentication** — connect with a SmartThings Personal Access Token (PAT)
 - ✅ **Token validation** — verify a token against the cloud before using it
 - 🔍 **Device discovery** — enumerate every device in your account (paginated)
-- 🧩 **Capability discovery** — inspect each device's components and capabilities
+- 🧩 **Capability classes** — each device capability is a typed object exposing
+  getters (attributes) and setters/commands; `Capability` is the polymorphic base
+- 🎚️ **Device control** — read live status (`GET …/status`) and send commands
+  (`POST …/commands`) through **126 typed capability classes**: 19 standard ones
+  (`switch`, `switchLevel`, `audioVolume`, `audioMute`, `contactSensor`,
+  `temperatureMeasurement`, `thermostatCoolingSetpoint`, `mediaPlayback`, `tvChannel`,
+  `refrigeration`, `washerOperatingState`, …) plus **107 Samsung-proprietary ones** in
+  per-prefix sub-namespaces (`samsungce::*`, `samsungvd::*`, `custom::*`, `sec::*`,
+  `hca::*`, `samsungim::*`). Any unrecognised id falls back to a generic capability.
 - 🏠 **Locations & rooms** — resolve devices to their location and room
-- 🔄 **Reactive objects** — `Device` is a `ReactiveLitepp::ObservableObject` exposing
-  its metadata through observable properties
+- 🔄 **Reactive objects** — `Device` and every `Capability` are
+  `ReactiveLitepp::ObservableObject`s exposing observable properties
 - 📦 **vcpkg + CMake** — easy dependency management and integration
 - 🔧 **Cross-platform** — Windows, Linux, and macOS
 
@@ -46,7 +54,8 @@ provided).
 ## Getting a Personal Access Token (PAT)
 
 1. Go to <https://account.smartthings.com/tokens>.
-2. Create a token with at least the **`r:devices:*`** and **`r:locations:*`** scopes.
+2. Create a token with at least the **`r:devices:*`**, **`x:devices:*`** (to send
+   commands) and **`r:locations:*`** scopes.
 3. Copy the token — you will not be able to see it again.
 
 > ⚠️ PATs created after **30 December 2024 expire 24 hours after creation**. If a
@@ -103,6 +112,55 @@ Location: Home (3 device(s))
         [main] switch, switchLevel, refresh
 ```
 
+The `device_control` example fetches a device's live status, prints typed attribute
+values, and sends a real **self-restoring** command (e.g. nudges and restores the
+volume, or toggles a switch twice). Target a specific device with
+`SMARTTHINGS_DEVICE_ID`, otherwise it picks the first controllable device:
+
+```bash
+$env:SMARTTHINGS_TOKEN = "<your-pat>"     # needs x:devices:* scope for commands
+./build/examples/device_control
+```
+
+The `device_control` example shows how to control a single device. The
+`full_discovery` example instead **dumps every device, every capability, every
+attribute value and command** (read-only, `r:devices:*` is enough):
+
+```bash
+$env:SMARTTHINGS_TOKEN = "<your-pat>"
+./build/examples/full_discovery
+```
+
+```
+Lave-linge:
+    switch:
+        attributes:
+            switch: off
+        commands:
+            on
+            off
+    washerOperatingState:
+        attributes:
+            completionTime: 2026-06-30T22:24:49Z
+            machineState: stop
+            supportedMachineStates: [stop, run, pause]
+            washerJobState: none
+        commands:
+            setMachineState
+    samsungce.washerOperatingState:
+        attributes:
+            operatingState: ready
+            progress: 1 %
+            scheduledJobs: [{"jobName":"wash","timeInMin":80}, ...]
+            supportedOperatingStates: [ready, running, paused]
+        commands:
+            resume
+            ...
+    ...
+```
+
+(Capabilities on non-`main` components are shown as `<component>/<capability>`.)
+
 ## Usage
 
 ```cpp
@@ -119,10 +177,17 @@ int main() {
         return 1;
     }
 
-    for (const auto& device : client.getDevices()) {
-        std::cout << device->Label.Get() << " (" << device->Type.Get() << ")\n";
-        for (const auto& capability : device->getCapabilityIds()) {
-            std::cout << "  - " << capability << "\n";
+    auto devices = client.getDevices();
+    for (const auto& device : devices) {
+        device->refreshStatus();                       // fetch live attribute values
+
+        // Typed control: get a capability by its concrete type.
+        if (auto* sw = device->getCapability<Switch>()) {
+            std::cout << device->Label.Get() << " is " << sw->State.Get() << "\n";
+            sw->on();                                   // POST a command
+        }
+        if (auto* vol = device->getCapability<AudioVolume>()) {
+            vol->setVolume(20);                         // setter == command
         }
     }
     return 0;
@@ -139,14 +204,21 @@ smartthings4cpp/
 ├── overlay-ports/              # Backup vcpkg port for reactivelitepp
 ├── include/smartthings4cpp/    # Public headers
 │   ├── smartthings4cpp.h       # Umbrella header
-│   ├── client.h                # Cloud client: auth + discovery
-│   ├── device.h                # Device (ObservableObject) + capabilities
-│   ├── types.h                 # Result, ErrorCode, Capability, Component, ...
+│   ├── client.h                # Cloud client: auth + discovery + status/commands
+│   ├── device.h                # Device (ObservableObject) + components/capabilities
+│   ├── component.h             # Component: owns its capabilities
+│   ├── capability.h            # Capability base class + factory
+│   ├── capabilities.h          # Umbrella for all typed capabilities
+│   ├── capabilities/           # Standard caps (Switch, SwitchLevel, ...) +
+│   │                           #   samsungce/ samsungvd/ custom/ sec/ hca/ samsungim/
+│   │                           #   (Samsung-proprietary caps, generated)
+│   ├── types.h                 # Result, ErrorCode, Category, Location, Room
 │   ├── exceptions.h            # Exception types
 │   ├── http_client.h           # HTTP client wrapper (cpr)
 │   └── json_utils.h            # JSON utilities
-├── src/                        # Implementation
-├── examples/                   # device_listing, authentication
+├── src/                        # Implementation (incl. src/capabilities/)
+├── examples/                   # device_listing, authentication, device_control, full_discovery
+├── tools/                      # Generator for the proprietary capabilities
 └── tests/                      # Catch2 unit tests (offline)
 ```
 

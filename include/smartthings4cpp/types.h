@@ -13,38 +13,15 @@
 namespace smartthings4cpp {
 
 	/**
-	 * @brief A capability exposed by a device component
-	 *
-	 * In the SmartThings model a capability (e.g. "switch", "switchLevel",
-	 * "colorControl") describes a set of commands and attributes a device
-	 * supports. The device-description endpoint reports only the capability
-	 * @c id and @c version; the concrete attribute values are fetched separately
-	 * from the device status endpoint (planned for the device-control iteration).
-	 */
-	struct Capability {
-		std::string id;       ///< Capability identifier (e.g. "switch")
-		int version = 1;      ///< Capability version
-	};
-
-	/**
 	 * @brief A category hint reported for a device component
+	 *
+	 * @note Capability and Component are no longer plain structs: a capability is a
+	 *       polymorphic object (see capability.h) and a Component owns its
+	 *       capabilities (see component.h).
 	 */
 	struct Category {
 		std::string name;          ///< Category name (e.g. "Light", "Switch")
 		std::string categoryType;  ///< Origin of the category (e.g. "manufacturer", "user")
-	};
-
-	/**
-	 * @brief A component of a device
-	 *
-	 * Every device has at least a "main" component. Each component groups a set
-	 * of capabilities and optional category hints.
-	 */
-	struct Component {
-		std::string id;                          ///< Component id (e.g. "main")
-		std::string label;                       ///< Human readable component label
-		std::vector<Capability> capabilities;    ///< Capabilities exposed by this component
-		std::vector<Category> categories;        ///< Category hints for this component
 	};
 
 	/**
@@ -76,6 +53,7 @@ namespace smartthings4cpp {
 		InvalidRequest,
 		ResourceNotFound,
 		InvalidParameter,
+		Conflict,
 		RateLimited,
 		ApiError,
 		TimeoutError,

@@ -15,3 +15,19 @@ set_target_properties(authentication PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
+
+# Device control example (read typed state + send a self-restoring command)
+add_executable(device_control device_control.cpp)
+target_link_libraries(device_control PRIVATE smartthings4cpp)
+set_target_properties(device_control PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+# Full discovery example (dump every capability's attributes + commands per device)
+add_executable(full_discovery full_discovery.cpp)
+target_link_libraries(full_discovery PRIVATE smartthings4cpp)
+set_target_properties(full_discovery PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)

@@ -116,6 +116,8 @@ inline std::string errorCodeToString(ErrorCode code) {
             return "Resource Not Found";
         case ErrorCode::InvalidParameter:
             return "Invalid Parameter";
+        case ErrorCode::Conflict:
+            return "Conflict";
         case ErrorCode::RateLimited:
             return "Rate Limited";
         case ErrorCode::ApiError:

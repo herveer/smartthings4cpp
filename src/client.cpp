@@ -262,4 +262,97 @@ namespace smartthings4cpp {
 		return rooms;
 	}
 
+	nlohmann::json Client::getDeviceStatus(const std::string& device_id) {
+		if (!isAuthenticated() || device_id.empty()) {
+			return nlohmann::json(nullptr);
+		}
+
+		try {
+			HttpClient client;
+			client.setTimeout(REQUEST_TIMEOUT);
+
+			auto response = client.get(_base_url + "/devices/" + device_id + "/status", authHeaders());
+			if (!response.isSuccess()) {
+				return nlohmann::json(nullptr);
+			}
+			return json_utils::parse(response.body);
+		}
+		catch (const std::exception&) {
+			return nlohmann::json(nullptr);
+		}
+	}
+
+	nlohmann::json Client::getCapabilityStatus(const std::string& device_id,
+		const std::string& component_id, const std::string& capability_id) {
+		if (!isAuthenticated() || device_id.empty() || component_id.empty() || capability_id.empty()) {
+			return nlohmann::json(nullptr);
+		}
+
+		try {
+			HttpClient client;
+			client.setTimeout(REQUEST_TIMEOUT);
+
+			std::string url = _base_url + "/devices/" + device_id + "/components/" + component_id
+				+ "/capabilities/" + capability_id + "/status";
+			auto response = client.get(url, authHeaders());
+			if (!response.isSuccess()) {
+				return nlohmann::json(nullptr);
+			}
+			return json_utils::parse(response.body);
+		}
+		catch (const std::exception&) {
+			return nlohmann::json(nullptr);
+		}
+	}
+
+	Result<void> Client::executeCommands(const std::string& device_id, const nlohmann::json& commands) {
+		if (!isAuthenticated()) {
+			return Result<void>(ErrorCode::AuthenticationRequired, "No access token set");
+		}
+		if (device_id.empty()) {
+			return Result<void>(ErrorCode::InvalidParameter, "Device id is empty");
+		}
+
+		try {
+			HttpClient client;
+			client.setTimeout(REQUEST_TIMEOUT);
+
+			std::string body = commands.dump();
+			auto response = client.post(_base_url + "/devices/" + device_id + "/commands",
+				body, authHeaders());
+
+			if (response.isSuccess()) {
+				// 200 OK or 207 Multi-Status: the command was accepted.
+				return Result<void>();
+			}
+
+			switch (response.status_code) {
+			case 401:
+			case 403:
+				return Result<void>(ErrorCode::AuthenticationFailed,
+					"Access token is invalid or lacks the required scope (need x:devices:*)");
+			case 404:
+				return Result<void>(ErrorCode::ResourceNotFound, "Device not found");
+			case 409:
+				return Result<void>(ErrorCode::Conflict, "Device is offline or in a conflicting state");
+			case 422:
+				return Result<void>(ErrorCode::InvalidParameter,
+					"Invalid command or arguments for this capability");
+			case 429:
+				return Result<void>(ErrorCode::RateLimited, "Rate limit exceeded");
+			case 0:
+				return Result<void>(ErrorCode::NetworkError,
+					"Failed to reach the SmartThings API: " + response.error_message);
+			default:
+				return Result<void>(ErrorCode::ApiError,
+					"Unexpected status " + std::to_string(response.status_code)
+					+ " executing command");
+			}
+		}
+		catch (const std::exception& e) {
+			return Result<void>(ErrorCode::UnknownError,
+				std::string("Command error: ") + e.what());
+		}
+	}
+
 } // namespace smartthings4cpp

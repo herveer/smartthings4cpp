@@ -117,6 +117,36 @@ namespace smartthings4cpp {
 		std::vector<Room> getRooms(const std::string& location_id);
 
 		/**
+		 * @brief Get the full status of a device (all components/capabilities/attributes)
+		 *
+		 * GET /v1/devices/{deviceId}/status.
+		 * @param device_id The device whose status to fetch
+		 * @return The parsed status JSON (shape @c {"components":{...}}), or a null
+		 *         json on auth/network/parse failure
+		 */
+		nlohmann::json getDeviceStatus(const std::string& device_id);
+
+		/**
+		 * @brief Get the status of a single capability on a component
+		 *
+		 * GET /v1/devices/{deviceId}/components/{componentId}/capabilities/{capabilityId}/status.
+		 * @return The per-capability status object @c {"<attr>":{"value":...}}, or a
+		 *         null json on failure
+		 */
+		nlohmann::json getCapabilityStatus(const std::string& device_id,
+			const std::string& component_id, const std::string& capability_id);
+
+		/**
+		 * @brief Execute one or more commands on a device
+		 *
+		 * POST /v1/devices/{deviceId}/commands.
+		 * @param device_id The target device
+		 * @param commands The command request body, e.g. produced by buildCommandsBody()
+		 * @return Result indicating success or failure (mapped from the HTTP status)
+		 */
+		Result<void> executeCommands(const std::string& device_id, const nlohmann::json& commands);
+
+		/**
 		 * @brief Override the API base URL (mainly for testing / mocking)
 		 * @param url Base URL without a trailing slash (e.g. the default
 		 *            https://api.smartthings.com/v1)

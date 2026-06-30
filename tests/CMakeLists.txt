@@ -6,6 +6,7 @@ set(TEST_SOURCES
     main.cpp
     client_tests.cpp
     device_tests.cpp
+    capability_tests.cpp
     json_utils_tests.cpp
     types_tests.cpp
 )
