@@ -12,11 +12,13 @@ namespace smartthings4cpp {
 		: _id(id), _client(client) {
 	}
 
-	const std::vector<Component>& Device::getComponents() const {
+	const std::vector<Component>& Device::getComponents() {
+		ensureRefreshed();
 		return _components;
 	}
 
 	Component* Device::getComponent(const std::string& id) {
+		ensureRefreshed();
 		for (auto& component : _components) {
 			if (component.id == id) {
 				return &component;
@@ -78,7 +80,14 @@ namespace smartthings4cpp {
 			}
 		}
 
+		_hasBeenRefreshed = true;
 		return Result<void>();
+	}
+
+	void Device::ensureRefreshed() {
+		if (!_hasBeenRefreshed) {
+			refreshStatus();
+		}
 	}
 
 	void Device::initFromJson(const nlohmann::json& json) {

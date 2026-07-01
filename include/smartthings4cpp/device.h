@@ -31,9 +31,12 @@ namespace smartthings4cpp {
 	 * non-movable; obtain instances through Client::getDevices() or
 	 * Client::getDevice().
 	 *
-	 * After discovery, capability attribute values are empty until refreshStatus()
-	 * is called (which fetches GET /v1/devices/{id}/status and distributes it to
-	 * each capability).
+	 * After discovery, capability attribute values are empty until the device's
+	 * status has been fetched at least once. getComponent()/getCapability() take
+	 * care of this automatically: the first call transparently performs the same
+	 * fetch as refreshStatus() before returning, so typed attribute getters never
+	 * observe stale, empty, pre-discovery state. Call refreshStatus() explicitly
+	 * whenever you want to force a later re-fetch.
 	 */
 	class Device : public ObservableObject {
 	public:
@@ -63,14 +66,21 @@ namespace smartthings4cpp {
 		/** @brief Presentation identifier used by the SmartThings UI (read-only) */
 		ReadonlyProperty<std::string> PresentationId{ [this]() { return _presentationId; } };
 
+		/** @brief Whether the device's status has been fetched at least once (read-only) */
+		ReadonlyProperty<bool> HasBeenRefreshed{ [this]() { return _hasBeenRefreshed; } };
+
 		/**
 		 * @brief Get the components owned by this device
 		 * @return Const reference to the device's component list (declared order)
 		 */
-		const std::vector<Component>& getComponents() const;
+		const std::vector<Component>& getComponents();
 
 		/**
 		 * @brief Get a component by id
+		 *
+		 * Triggers a one-time refreshStatus() first if the device's status has
+		 * never been fetched, so the returned component's capabilities already
+		 * carry live attribute values.
 		 * @param id Component id (default "main")
 		 * @return Pointer to the component, or nullptr if absent (owned by this device)
 		 */
@@ -78,6 +88,9 @@ namespace smartthings4cpp {
 
 		/**
 		 * @brief Get a capability by id on a component (base pointer)
+		 *
+		 * Triggers a one-time refreshStatus() first if the device's status has
+		 * never been fetched (see getComponent()).
 		 * @param capabilityId Capability id (e.g. "switch")
 		 * @param component Component id (default "main")
 		 * @return Pointer to the capability, or nullptr if absent
@@ -87,6 +100,9 @@ namespace smartthings4cpp {
 
 		/**
 		 * @brief Get a capability by its concrete type on a component
+		 *
+		 * Triggers a one-time refreshStatus() first if the device's status has
+		 * never been fetched (see getComponent()).
 		 *
 		 * Example:
 		 * @code
@@ -127,7 +143,9 @@ namespace smartthings4cpp {
 		 * @brief Fetch the device status and distribute it to each capability
 		 *
 		 * GET /v1/devices/{id}/status, then updateStatus() each capability so typed
-		 * attribute getters return live values.
+		 * attribute getters return live values. On success, marks HasBeenRefreshed
+		 * so getComponent()/getCapability() no longer auto-trigger a fetch; on
+		 * failure it stays false and the next attribute access will retry.
 		 * @return Result indicating success or failure
 		 */
 		Result<void> refreshStatus();
@@ -153,6 +171,16 @@ namespace smartthings4cpp {
 		std::vector<Component> _components;
 
 		Client* _client = nullptr;
+		bool _hasBeenRefreshed = false;
+
+		/**
+		 * @brief Fetch the device status once, the first time it is needed
+		 *
+		 * No-op once HasBeenRefreshed is true. Called by getComponent() so any
+		 * attribute read reached through getComponent()/getCapability() is backed
+		 * by live data even if the caller never explicitly calls refreshStatus().
+		 */
+		void ensureRefreshed();
 
 		friend class Client;
 	};

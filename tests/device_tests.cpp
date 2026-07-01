@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "smartthings4cpp/device.h"
+#include "smartthings4cpp/client.h"
 #include "smartthings4cpp/capabilities.h"
 #include "smartthings4cpp/json_utils.h"
 
@@ -127,4 +128,27 @@ TEST_CASE("Device::getCapabilityIds de-duplicates across components", "[device]"
 	// Same-id capability resolves per component.
 	REQUIRE(device.getCapability<Switch>("main") != nullptr);
 	REQUIRE(device.getCapability<Switch>("outlet1") != nullptr);
+}
+
+TEST_CASE("Device starts unrefreshed and stays that way without a usable client", "[device]") {
+	Device device;
+	device.initFromJson(json_utils::parse(kDeviceJson));
+
+	REQUIRE_FALSE(device.HasBeenRefreshed.Get());
+
+	// No client attached: getComponent()/getCapability() attempt (and fail) the
+	// auto-refresh, but must not crash and must not fake success.
+	REQUIRE(device.getComponent("main") != nullptr);
+	REQUIRE(device.getCapability<Switch>() != nullptr);
+	REQUIRE_FALSE(device.HasBeenRefreshed.Get());
+}
+
+TEST_CASE("Device with an unauthenticated client still fails the auto-refresh without crashing", "[device]") {
+	Client client; // no access token -> Client fails fast, no network call
+	Device device("11111111-2222-3333-4444-555555555555", &client);
+	device.initFromJson(json_utils::parse(kDeviceJson));
+
+	REQUIRE_FALSE(device.HasBeenRefreshed.Get());
+	REQUIRE(device.getCapability<Switch>() != nullptr);
+	REQUIRE_FALSE(device.HasBeenRefreshed.Get());
 }

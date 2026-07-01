@@ -179,7 +179,9 @@ int main() {
 
     auto devices = client.getDevices();
     for (const auto& device : devices) {
-        device->refreshStatus();                       // fetch live attribute values
+        // getCapability()/getComponent() auto-fetch the device's status the first
+        // time they're called, so attribute getters below are never stale/empty.
+        // Call device->refreshStatus() explicitly whenever you want a later re-fetch.
 
         // Typed control: get a capability by its concrete type.
         if (auto* sw = device->getCapability<Switch>()) {

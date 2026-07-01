@@ -166,8 +166,6 @@ int main() {
 
 	for (const auto& device : devices) {
 		// Pull live attribute values for this device's capabilities.
-		device->refreshStatus();
-
 		const std::string label = device->Label.Get();
 		std::cout << (label.empty() ? device->Id.Get() : label) << ":\n";
 
