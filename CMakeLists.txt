@@ -23,6 +23,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(cpr CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
+# Client's background polling thread uses <thread>/<condition_variable>.
+# CMake's threading module supplies -lpthread on Linux/macOS; a no-op on MSVC.
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 # Workaround: cmake config mode on case-sensitive filesystems only searches for
 # <PackageName>Config.cmake or <lowercasepackagename>-config.cmake, but the
 # installed file is ReactiveLitepp-config.cmake (mixed-case with hyphen).

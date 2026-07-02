@@ -144,11 +144,52 @@ TEST_CASE("Device starts unrefreshed and stays that way without a usable client"
 }
 
 TEST_CASE("Device with an unauthenticated client still fails the auto-refresh without crashing", "[device]") {
-	Client client; // no access token -> Client fails fast, no network call
+	Client client(PollingMode::Manual); // no access token -> Client fails fast, no network call
 	Device device("11111111-2222-3333-4444-555555555555", &client);
 	device.initFromJson(json_utils::parse(kDeviceJson));
 
 	REQUIRE_FALSE(device.HasBeenRefreshed.Get());
 	REQUIRE(device.getCapability<Switch>() != nullptr);
 	REQUIRE_FALSE(device.HasBeenRefreshed.Get());
+}
+
+TEST_CASE("Capability::component() and Component::device navigate back to their owners", "[device]") {
+	Device device;
+	device.initFromJson(json_utils::parse(kDeviceJson));
+
+	auto* sw = device.getCapability<Switch>();
+	REQUIRE(sw != nullptr);
+
+	auto* component = sw->component();
+	REQUIRE(component != nullptr);
+	REQUIRE(component->id == "main");
+	REQUIRE(component->device == &device);
+}
+
+TEST_CASE("Component::PropertyChanged and Device::PropertyChanged relay a capability's PropertyChanged", "[device]") {
+	Device device;
+	device.initFromJson(json_utils::parse(kDeviceJson));
+
+	auto* component = device.getComponent("main");
+	REQUIRE(component != nullptr);
+
+	int componentChanges = 0;
+	int deviceChanges = 0;
+	Capability* firedSender = nullptr;
+
+	auto componentSub = component->PropertyChanged.SubscribeScoped(
+		[&](ObservableObject&, PropertyChangedArgs) { ++componentChanges; });
+	auto deviceSub = device.PropertyChanged.SubscribeScoped(
+		[&](ObservableObject& obj, PropertyChangedArgs) {
+			++deviceChanges;
+			firedSender = &static_cast<Capability&>(obj);
+		});
+
+	auto* sw = device.getCapability<Switch>();
+	REQUIRE(sw != nullptr);
+	sw->updateStatus(json_utils::parse(R"({"switch":{"value":"on"}})"));
+
+	REQUIRE(componentChanges > 0);
+	REQUIRE(deviceChanges > 0);
+	REQUIRE(firedSender == sw);
 }

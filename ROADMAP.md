@@ -21,7 +21,7 @@ reactive pattern of [reactivelitepp](https://github.com/herveer/reactivelitepp).
 | TLS | Self-signed (verification off) | Public certificates (verification on) |
 | Entry point | `Bridge` | `Client` |
 | Resources | Lights, sensors, devices | Devices → components → capabilities |
-| Real-time | Server-Sent Events | Webhooks / subscriptions (future) |
+| Real-time | Server-Sent Events | Automatic background polling (`Client`) today; webhooks/subscriptions once OAuth2 app creation is unblocked |
 
 ---
 
@@ -82,19 +82,44 @@ a typed class deriving from a polymorphic `Capability` base.
 
 ## Phase 3: Real-time Updates 🔮
 
-- [ ] SmartThings subscriptions / webhooks (or SSE where available)
-- [ ] A state-manager layer that fires `ReactiveLitepp::Event`s, like hue4cpp's
-      `StateManager`, so `Device` properties update live
-- [ ] Event-driven examples
+- [x] Automatic, deduplicated polling - `Client` polls every `Device` it hands out
+      in the background by default (`PollingMode`, `Client()`/`Client(token)` opt
+      out via `PollingMode::Manual`; `pollNow()` is the synchronous/manual-drive
+      primitive). Transparent to the consumer: no separate poller object to
+      construct or start. A `Client`-owned registry (`deviceId -> weak_ptr<Device>`
+      buckets) means calling `getDevice()`/`getDevices()` more than once for the
+      same device id still fetches that id's status only once per cycle and
+      applies it to every live `Device` for it; a destroyed `Device` silently
+      drops out of polling with no explicit unregister call (its `weak_ptr` just
+      fails to lock). No new "state-manager" layer was needed: the existing
+      reactive property system (`ObservableObject::SetPropertyValueAndNotify`)
+      already only fires `PropertyChanged` when a value actually changes, so
+      polling alone reproduces "notified only on real change" for free. Works
+      under either PAT or OAuth2 - it's the PAT-friendly stand-in while push
+      isn't provisionable (see below). Example: `examples/live_updates.cpp`.
+- [ ] SmartThings subscriptions / webhooks (or SSE where available) - **blocked**:
+      Samsung is mid-migration from classic SmartApps to a new "API Integration
+      App" model, and as of 2026-07 there is no way to create a new OAuth2 app at
+      all, so this can't be provisioned or tested yet even though the OAuth2 flow
+      itself (Phase 4) is implemented and ready. Revisit once app creation is
+      possible again; automatic polling stays as the fallback for PAT users either way.
+- [ ] Event-driven examples (once the above is unblocked)
 
 ---
 
 ## Phase 4: Production Authentication 🔮
 
-- [ ] OAuth 2.0 authorization-code flow (authorize URL, code→token exchange, refresh)
+- [x] OAuth 2.0 authorization-code flow (authorize URL, code→token exchange, refresh) -
+      `oauth2::OAuth2Authenticator` builds the authorize URL and exchanges a redirect
+      result (or refresh token) for an `OAuth2Token`; it never opens a browser or
+      captures the redirect itself, so any UX (browser + paste-back, a webview, a
+      local listener, ...) can drive it. `Client::setTokenRefreshCallback()` makes
+      401-triggered refresh transparent to callers. See `examples/oauth2_authentication.cpp`.
 - [ ] Token storage via OS keychains (Windows Credential Manager, macOS Keychain,
-      Linux libsecret)
-- [ ] SmartApp registration guidance
+      Linux libsecret) - the example persists to a plain-text JSON file for now,
+      same caveat as the PAT example
+- [ ] SmartApp registration guidance - covered minimally by the new README section
+      and the example's startup instructions; could grow into a dedicated guide
 
 ---
 
@@ -119,6 +144,15 @@ a typed class deriving from a polymorphic `Capability` base.
 
 ---
 
-**Last Updated**: 2026-06-30
-**Current Phase**: Phase 2 — Device Control ✅ (all documented capabilities in the test devices)
-**Next Step**: Phase 3 — real-time updates (webhooks/SSE), then more standard capabilities as needed
+**Last Updated**: 2026-07-01
+**Current Phase**: Phase 3 — automatic, deduplicated live updates ✅ (`Client`
+polls in the background by default); Phase 4 — OAuth 2.0 authorization-code
+flow ✅ (token storage via OS keychains and deeper SmartApp registration
+guidance remain open)
+**Next Step**: real push (webhooks/subscriptions) is blocked - Samsung is mid-migration
+from classic SmartApps to a new "API Integration App" model and there is currently no
+way to create a new OAuth2 app at all. Automatic `Client` polling is the working
+mechanism for PAT users in the meantime. Once app creation is possible again: register a real OAuth-In
+App, spike the (as of 2026-07 undocumented/unstable) SSE-style `/subscriptions`
+endpoint, and fall back to the classic webhook/lifecycle-handler path if that isn't
+viable. Also open: more standard capabilities (colorControl, lock, ...) as needed.

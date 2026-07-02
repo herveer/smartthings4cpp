@@ -17,6 +17,7 @@ namespace smartthings4cpp {
 
 	// Forward declarations
 	class Client;
+	struct Component;
 
 	/**
 	 * @brief Abstract base class for a capability exposed by a device component
@@ -65,6 +66,14 @@ namespace smartthings4cpp {
 
 		/** @brief Plain accessor for the component id */
 		const std::string& componentId() const { return _componentId; }
+
+		/**
+		 * @brief Get the owning Component
+		 * @return Pointer to the Component that owns this capability, or nullptr
+		 *         if not wired to one (e.g. a capability constructed directly in
+		 *         a test rather than obtained through a Device)
+		 */
+		Component* component() const { return _component; }
 
 		/**
 		 * @brief Re-fetch this single capability's status from the cloud
@@ -167,6 +176,14 @@ namespace smartthings4cpp {
 		std::string _deviceId;
 		Client* _client;
 		nlohmann::json _status = nlohmann::json::object();
+		Component* _component = nullptr;
+
+		/// Sets the owning Component back-pointer. Called by
+		/// Component::addCapability() once the capability has been placed at
+		/// its final, stable address.
+		void setComponent(Component* component) { _component = component; }
+
+		friend struct Component;
 	};
 
 	/**

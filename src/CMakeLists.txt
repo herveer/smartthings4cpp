@@ -5,6 +5,8 @@ set(SMARTTHINGS4CPP_SOURCES
     capability.cpp
     http_client.cpp
     json_utils.cpp
+    base64.cpp
+    oauth2/oauth2_authenticator.cpp
     capabilities/switch.cpp
     capabilities/switch_level.cpp
     capabilities/audio_volume.cpp
@@ -62,10 +64,16 @@ target_link_libraries(smartthings4cpp
         cpr::cpr
         nlohmann_json::nlohmann_json
         ReactiveLitepp::ReactiveLitepp
+        Threads::Threads
 )
 
 if (WIN32)
     target_link_libraries(smartthings4cpp PUBLIC ws2_32)
+    # windows.h (pulled in transitively via cpr/curl) defines max/min macros
+    # that shadow std::max/std::min unless this is set - needed for the
+    # polling interval clamp in client.cpp. PUBLIC so consumers (examples,
+    # tests) that also happen to include windows.h transitively are protected too.
+    target_compile_definitions(smartthings4cpp PUBLIC NOMINMAX)
 endif()
 
 # Compiler warnings

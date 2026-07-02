@@ -37,6 +37,15 @@ namespace smartthings4cpp {
 	 * fetch as refreshStatus() before returning, so typed attribute getters never
 	 * observe stale, empty, pre-discovery state. Call refreshStatus() explicitly
 	 * whenever you want to force a later re-fetch.
+	 *
+	 * The inherited PropertyChanged fires for every capability change anywhere
+	 * on this device: each Component relays its capabilities' PropertyChanged
+	 * (see Component::PropertyChanged), and Device relays every component's in
+	 * turn - subscribe once here instead of on each capability individually if
+	 * you want to observe the whole device. The sender your handler receives is
+	 * always the Capability that actually changed (cast it, e.g.
+	 * @c static_cast<Capability&>(sender)), and Capability::component() /
+	 * Component::device navigate back up from there.
 	 */
 	class Device : public ObservableObject {
 	public:
@@ -71,9 +80,12 @@ namespace smartthings4cpp {
 
 		/**
 		 * @brief Get the components owned by this device
+		 *
+		 * Triggers a one-time refreshStatus() first if the device's status has
+		 * never been fetched (see getComponent()).
 		 * @return Const reference to the device's component list (declared order)
 		 */
-		const std::vector<Component>& getComponents();
+		const std::vector<Component>& getComponents() const;
 
 		/**
 		 * @brief Get a component by id
@@ -147,8 +159,11 @@ namespace smartthings4cpp {
 		 * so getComponent()/getCapability() no longer auto-trigger a fetch; on
 		 * failure it stays false and the next attribute access will retry.
 		 * @return Result indicating success or failure
+		 * @note Delegates to applyStatus() after fetching; Client::pollNow() calls
+		 *       applyStatus() directly with one pre-fetched status shared across
+		 *       every live Device for the same underlying device id.
 		 */
-		Result<void> refreshStatus();
+		Result<void> refreshStatus() const;
 
 		/**
 		 * @brief Initialize device metadata and build capability objects from JSON
@@ -168,10 +183,19 @@ namespace smartthings4cpp {
 		std::string _roomId;
 		std::string _presentationId;
 
-		std::vector<Component> _components;
+		// mutable: refreshStatus()/ensureRefreshed() are const (see getComponents())
+		// even though they populate these on first access, the same lazily-refreshed
+		// cache idiom as Client::_access_token.
+		mutable std::vector<Component> _components;
+
+		// Relays each Component's (aggregate) PropertyChanged up through this
+		// Device's own (inherited) PropertyChanged - see initFromJson(). Declared
+		// after _components so it is destroyed first (reverse declaration order),
+		// unsubscribing before the Components/Capabilities it references are.
+		std::vector<ScopedSubscription> _componentSubscriptions;
 
 		Client* _client = nullptr;
-		bool _hasBeenRefreshed = false;
+		mutable bool _hasBeenRefreshed = false;
 
 		/**
 		 * @brief Fetch the device status once, the first time it is needed
@@ -180,7 +204,19 @@ namespace smartthings4cpp {
 		 * attribute read reached through getComponent()/getCapability() is backed
 		 * by live data even if the caller never explicitly calls refreshStatus().
 		 */
-		void ensureRefreshed();
+		void ensureRefreshed() const;
+
+		/**
+		 * @brief Distribute an already-fetched status JSON to this device's capabilities
+		 *
+		 * The "apply" half of refreshStatus() (fetch + apply), factored out so
+		 * Client::pollNow() can fetch a given device id's status once and apply
+		 * it to every live Device wrapping that id, instead of each Device
+		 * independently re-fetching the same status over the network.
+		 * @param status Status JSON in the shape refreshStatus() itself fetches
+		 *        (@c {"components":{...}}); validated the same way.
+		 */
+		Result<void> applyStatus(const nlohmann::json& status) const;
 
 		friend class Client;
 	};

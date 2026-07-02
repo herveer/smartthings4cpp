@@ -9,6 +9,7 @@ set(TEST_SOURCES
     capability_tests.cpp
     json_utils_tests.cpp
     types_tests.cpp
+    oauth2_authenticator_tests.cpp
 )
 
 # Create test executable

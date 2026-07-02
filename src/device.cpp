@@ -12,7 +12,7 @@ namespace smartthings4cpp {
 		: _id(id), _client(client) {
 	}
 
-	const std::vector<Component>& Device::getComponents() {
+	const std::vector<Component>& Device::getComponents() const {
 		ensureRefreshed();
 		return _components;
 	}
@@ -56,12 +56,14 @@ namespace smartthings4cpp {
 		return ids;
 	}
 
-	Result<void> Device::refreshStatus() {
+	Result<void> Device::refreshStatus() const {
 		if (!_client) {
 			return Result<void>(ErrorCode::InvalidParameter, "No client associated with device");
 		}
+		return applyStatus(_client->getDeviceStatus(_id));
+	}
 
-		auto status = _client->getDeviceStatus(_id);
+	Result<void> Device::applyStatus(const nlohmann::json& status) const {
 		if (status.is_null() || !status.is_object() || !status.contains("components")
 			|| !status["components"].is_object()) {
 			return Result<void>(ErrorCode::NetworkError, "Failed to fetch device status");
@@ -84,7 +86,7 @@ namespace smartthings4cpp {
 		return Result<void>();
 	}
 
-	void Device::ensureRefreshed() {
+	void Device::ensureRefreshed() const {
 		if (!_hasBeenRefreshed) {
 			refreshStatus();
 		}
@@ -112,24 +114,19 @@ namespace smartthings4cpp {
 
 		// Components -> capability objects (built via the factory)
 		_components.clear();
+		_componentSubscriptions.clear();
 		if (json.contains("components") && json["components"].is_array()) {
+			// Reserved upfront so the push_back() below never reallocates: once a
+			// Component is wired (addCapability() called on it), its address must
+			// never change again, since each capability holds a raw Component*
+			// back-pointer to it and this Device subscribes directly to its
+			// PropertyChanged (see Component's move-constructor note in component.h).
+			_components.reserve(json["components"].size());
+
 			for (const auto& component_json : json["components"]) {
 				Component component;
 				component.id = json_utils::getValueOr<std::string>(component_json, "id", "");
 				component.label = json_utils::getValueOr<std::string>(component_json, "label", "");
-
-				if (component_json.contains("capabilities")
-					&& component_json["capabilities"].is_array()) {
-					for (const auto& capability_json : component_json["capabilities"]) {
-						std::string capabilityId =
-							json_utils::getValueOr<std::string>(capability_json, "id", "");
-						int version = json_utils::getValueOr<int>(capability_json, "version", 1);
-						if (!capabilityId.empty()) {
-							component.capabilities.push_back(
-								createCapability(capabilityId, version, component.id, _id, _client));
-						}
-					}
-				}
 
 				if (component_json.contains("categories")
 					&& component_json["categories"].is_array()) {
@@ -143,7 +140,35 @@ namespace smartthings4cpp {
 					}
 				}
 
+				// Move the still-empty (no capabilities, nothing wired) Component
+				// into its final vector slot *before* adding capabilities to it,
+				// so every capability's Component back-pointer ends up pointing at
+				// a stable address that will never change again (reserve() above
+				// guarantees no later push_back() in this loop can reallocate).
 				_components.push_back(std::move(component));
+				Component& stored = _components.back();
+				stored.device = this;
+
+				if (component_json.contains("capabilities")
+					&& component_json["capabilities"].is_array()) {
+					for (const auto& capability_json : component_json["capabilities"]) {
+						std::string capabilityId =
+							json_utils::getValueOr<std::string>(capability_json, "id", "");
+						int version = json_utils::getValueOr<int>(capability_json, "version", 1);
+						if (!capabilityId.empty()) {
+							stored.addCapability(
+								createCapability(capabilityId, version, stored.id, _id, _client));
+						}
+					}
+				}
+
+				// Relay this component's (aggregate) PropertyChanged up through
+				// this device's own (inherited) PropertyChanged, so subscribing
+				// once at the Device level hears about every capability change.
+				_componentSubscriptions.push_back(stored.PropertyChanged.SubscribeScoped(
+					[this](ObservableObject& obj, PropertyChangedArgs args) {
+						PropertyChanged.Notify(obj, args);
+					}));
 			}
 		}
 	}

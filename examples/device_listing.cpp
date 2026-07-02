@@ -191,7 +191,7 @@ int main() {
 	}
 
 	// Select a target device.
-	std::unique_ptr<Device> device;
+	std::shared_ptr<Device> device;
 	if (const char* envId = std::getenv("SMARTTHINGS_DEVICE_ID")) {
 		std::string id = trim(envId);
 		if (!id.empty()) {

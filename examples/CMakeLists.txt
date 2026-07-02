@@ -31,3 +31,19 @@ set_target_properties(full_discovery PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
+
+# OAuth2 authentication example (authorization-code flow: get + refresh tokens)
+add_executable(oauth2_authentication oauth2_authentication.cpp)
+target_link_libraries(oauth2_authentication PRIVATE smartthings4cpp)
+set_target_properties(oauth2_authentication PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+# Live updates example (automatic background polling + PropertyChanged)
+add_executable(live_updates live_updates.cpp)
+target_link_libraries(live_updates PRIVATE smartthings4cpp)
+set_target_properties(live_updates PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)

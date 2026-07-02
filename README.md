@@ -15,6 +15,8 @@ the SmartThings cloud simple and intuitive.
 ## Features
 
 - 🔐 **Token authentication** — connect with a SmartThings Personal Access Token (PAT)
+  or a self-registered **OAuth 2.0** app (authorize URL, code exchange, refresh, and
+  transparent re-authentication on `Client` via `setTokenRefreshCallback`)
 - ✅ **Token validation** — verify a token against the cloud before using it
 - 🔍 **Device discovery** — enumerate every device in your account (paginated)
 - 🧩 **Capability classes** — each device capability is a typed object exposing
@@ -29,6 +31,12 @@ the SmartThings cloud simple and intuitive.
 - 🏠 **Locations & rooms** — resolve devices to their location and room
 - 🔄 **Reactive objects** — `Device` and every `Capability` are
   `ReactiveLitepp::ObservableObject`s exposing observable properties
+- 📡 **Automatic live updates (polling)** — `Client` polls every device it hands
+  out in the background by default (opt out with `PollingMode::Manual`, or drive
+  updates yourself with `pollNow()`); `PropertyChanged` fires only for attributes
+  that actually changed, and fetching the same device id more than once still
+  polls it only once per cycle. Works under a PAT — SmartThings only pushes real
+  subscription/webhook events to an OAuth2-authorized app
 - 📦 **vcpkg + CMake** — easy dependency management and integration
 - 🔧 **Cross-platform** — Windows, Linux, and macOS
 
@@ -60,7 +68,108 @@ provided).
 
 > ⚠️ PATs created after **30 December 2024 expire 24 hours after creation**. If a
 > saved token stops working, generate a new one. For long-lived production
-> integrations, use the OAuth 2.0 authorization-code flow (planned — see the roadmap).
+> integrations, use the OAuth 2.0 authorization-code flow (see below).
+
+## Using OAuth2
+
+> ⚠️ **Currently blocked for new apps:** Samsung is mid-migration from classic
+> SmartApps to a new "API Integration App" model, and as of 2026-07 there is no
+> way to create a new OAuth2 app at all. The flow below is implemented and
+> ready, but you can't provision an app to use it with yet — see
+> [Live updates (polling)](#live-updates-polling) for the working alternative
+> in the meantime.
+
+For longer-lived integrations, register your own SmartThings **OAuth-In App**
+instead of using a PAT — the same self-service model, just with a refreshable
+token instead of a token that expires after 24 hours with no way to renew it:
+
+1. Install the [SmartThings CLI](https://github.com/SmartThingsCommunity/smartthings-cli)
+   and run `smartthings apps:create`, selecting **OAuth-In App**. Give it the
+   **`r:devices:*`**, **`x:devices:*`** and **`r:locations:*`** scopes and a
+   redirect URI (e.g. `http://localhost:9753/callback` — see the caveat below).
+2. Save the `clientId`/`clientSecret` it gives you.
+3. Use `smartthings4cpp::oauth2::OAuth2Authenticator`:
+
+```cpp
+#include <smartthings4cpp/smartthings4cpp.h>
+
+using namespace smartthings4cpp;
+using namespace smartthings4cpp::oauth2;
+
+OAuth2Config config;
+config.clientId = "...";
+config.clientSecret = "...";
+OAuth2Authenticator authenticator(config);
+
+// 1. Build the authorize URL and present it however you like (open a
+//    browser, print it, load it in a webview, ...) - the library has no
+//    opinion here.
+std::string url = authenticator.buildAuthorizeUrl("http://localhost:9753/callback");
+
+// 2. However you captured what came back from the redirect (a local
+//    listener, the user pasting the URL back, a mobile deep link, ...),
+//    hand it to completeAuthorization(). It accepts the full redirect URL
+//    or a bare code, and validates the CSRF state for you.
+Result<OAuth2Token> result = authenticator.completeAuthorization(redirect_result);
+
+// 3. Use the token, and optionally wire transparent refresh so Client
+//    self-heals past the access token's ~24h expiry instead of failing.
+Client client;
+client.setAccessToken(result.value->accessToken);
+client.setTokenRefreshCallback([&]() -> Result<std::string> {
+    auto refreshed = authenticator.refresh(result.value->refreshToken);
+    if (!refreshed.isSuccess()) return Result<std::string>(refreshed.error, refreshed.error_message);
+    return Result<std::string>(refreshed.value->accessToken);
+});
+```
+
+Run the full working version with `examples/oauth2_authentication` (env vars
+`SMARTTHINGS_CLIENT_ID`/`SMARTTHINGS_CLIENT_SECRET`, or it will prompt and save
+them locally). It persists the token to `oauth2_token.json` and refreshes it
+automatically on later runs.
+
+> ⚠️ SmartThings' docs say redirect URIs must be HTTPS, but a plain
+> `http://localhost:PORT/...` redirect URI has worked for self-registered
+> personal apps in practice — if yours is rejected at registration time,
+> register any HTTPS URL you control instead (even one that 404s) and copy
+> the `code` out of the browser's address bar the same way.
+
+## Live updates (polling)
+
+SmartThings only pushes real subscription/webhook events to an OAuth2-authorized
+app. With just a PAT (or while OAuth2 app creation is blocked, see above),
+`Client` is the working stand-in: **by default it automatically polls every
+device it hands out**, in the background, no separate poller to construct or
+start. Because the reactive property system only fires `PropertyChanged` when
+a value actually changes, you get "notified only on a real change" for free —
+and because `Client` deduplicates by device id internally, calling
+`getDevice()`/`getDevices()` more than once for the same device still polls it
+only once per cycle, updating every `Device` object you got back for it:
+
+```cpp
+#include <smartthings4cpp/smartthings4cpp.h>
+
+using namespace smartthings4cpp;
+
+Client client("your-personal-access-token"); // PollingMode::Automatic by default
+auto devices = client.getDevices();
+
+auto sensor = devices.front()->getCapability<ContactSensor>();
+auto sub = sensor->PropertyChanged.SubscribeScoped(
+    [](ObservableObject&, PropertyChangedArgs args) {
+        std::cout << "changed: " << args.PropertyName() << "\n";
+    });
+
+// Already polling - nothing else to start. Adjust the interval if you want:
+client.setPollingInterval(std::chrono::seconds(10));
+// ... later, e.g. before shutdown ...
+client.stopPolling();
+```
+
+Construct with `Client client(token, PollingMode::Manual);` to opt out of
+automatic polling entirely - `Client::pollNow()` is then available to drive a
+single poll cycle yourself (your own timer/thread) whenever you want one.
+Run `examples/live_updates` for a full working version.
 
 ## Building
 
@@ -161,6 +270,16 @@ Lave-linge:
 
 (Capabilities on non-`main` components are shown as `<component>/<capability>`.)
 
+The `live_updates` example watches every `contactSensor`/`switch` device (or one
+picked via `SMARTTHINGS_DEVICE_ID`), relying on `Client`'s automatic background
+polling to print each attribute change as it's detected — open/close a door or
+flip a switch in the SmartThings app while it's running to see it:
+
+```bash
+$env:SMARTTHINGS_TOKEN = "<your-pat>"
+./build/examples/live_updates
+```
+
 ## Usage
 
 ```cpp
@@ -217,9 +336,12 @@ smartthings4cpp/
 │   ├── types.h                 # Result, ErrorCode, Category, Location, Room
 │   ├── exceptions.h            # Exception types
 │   ├── http_client.h           # HTTP client wrapper (cpr)
-│   └── json_utils.h            # JSON utilities
-├── src/                        # Implementation (incl. src/capabilities/)
-├── examples/                   # device_listing, authentication, device_control, full_discovery
+│   ├── json_utils.h            # JSON utilities
+│   ├── base64.h                # Minimal base64 (OAuth2 Basic Auth header)
+│   └── oauth2/                 # OAuth2Config, OAuth2Token, OAuth2Authenticator
+├── src/                        # Implementation (incl. src/capabilities/, src/oauth2/)
+├── examples/                   # device_listing, authentication, oauth2_authentication,
+│                               #   device_control, full_discovery, live_updates
 ├── tools/                      # Generator for the proprietary capabilities
 └── tests/                      # Catch2 unit tests (offline)
 ```

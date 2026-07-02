@@ -4,6 +4,7 @@
 #include "smartthings4cpp/json_utils.h"
 
 #include <nlohmann/json.hpp>
+#include <algorithm>
 #include <chrono>
 #include <utility>
 
@@ -44,25 +45,21 @@ namespace smartthings4cpp {
 		}
 	}
 
-	Client::Client() = default;
-
-	Client::Client(const std::string& access_token)
-		: _access_token(access_token) {
-	}
-
-	Client::~Client() = default;
-
-	Client::Client(Client&& other) noexcept
-		: _access_token(std::move(other._access_token)),
-		_base_url(std::move(other._base_url)) {
-	}
-
-	Client& Client::operator=(Client&& other) noexcept {
-		if (this != &other) {
-			_access_token = std::move(other._access_token);
-			_base_url = std::move(other._base_url);
+	Client::Client(PollingMode pollingMode) {
+		if (pollingMode == PollingMode::Automatic) {
+			startPolling();
 		}
-		return *this;
+	}
+
+	Client::Client(const std::string& access_token, PollingMode pollingMode)
+		: _access_token(access_token) {
+		if (pollingMode == PollingMode::Automatic) {
+			startPolling();
+		}
+	}
+
+	Client::~Client() {
+		stopPolling();
 	}
 
 	void Client::setAccessToken(const std::string& token) {
@@ -77,6 +74,10 @@ namespace smartthings4cpp {
 		return !_access_token.empty();
 	}
 
+	void Client::setTokenRefreshCallback(std::function<Result<std::string>()> callback) {
+		_token_refresh_callback = std::move(callback);
+	}
+
 	void Client::setBaseUrl(const std::string& url) {
 		_base_url = url;
 	}
@@ -85,11 +86,68 @@ namespace smartthings4cpp {
 		return _base_url;
 	}
 
-	std::map<std::string, std::string> Client::authHeaders() const {
+	std::map<std::string, std::string> Client::authHeadersFor(const std::string& token) const {
 		return {
-			{ "Authorization", "Bearer " + _access_token },
+			{ "Authorization", "Bearer " + token },
 			{ "Accept", "application/json" }
 		};
+	}
+
+	HttpResponse Client::getWithAuth(const std::string& url) const {
+		HttpClient client;
+		client.setTimeout(REQUEST_TIMEOUT);
+
+		std::string tokenSnapshot;
+		{
+			std::lock_guard<std::mutex> lock(_authMutex);
+			tokenSnapshot = _access_token;
+		}
+
+		auto response = client.get(url, authHeadersFor(tokenSnapshot));
+		if (response.status_code == 401 && _token_refresh_callback) {
+			std::lock_guard<std::mutex> lock(_authMutex);
+			if (_access_token != tokenSnapshot) {
+				// Another thread already refreshed while our request was in
+				// flight; just retry with the token that's current now instead
+				// of refreshing a second time for the same expiry event.
+				response = client.get(url, authHeadersFor(_access_token));
+			}
+			else {
+				auto refreshed = _token_refresh_callback();
+				if (refreshed.isSuccess() && refreshed.hasValue()) {
+					_access_token = *refreshed.value;
+					response = client.get(url, authHeadersFor(_access_token));
+				}
+			}
+		}
+		return response;
+	}
+
+	HttpResponse Client::postWithAuth(const std::string& url, const std::string& body) const {
+		HttpClient client;
+		client.setTimeout(REQUEST_TIMEOUT);
+
+		std::string tokenSnapshot;
+		{
+			std::lock_guard<std::mutex> lock(_authMutex);
+			tokenSnapshot = _access_token;
+		}
+
+		auto response = client.post(url, body, authHeadersFor(tokenSnapshot));
+		if (response.status_code == 401 && _token_refresh_callback) {
+			std::lock_guard<std::mutex> lock(_authMutex);
+			if (_access_token != tokenSnapshot) {
+				response = client.post(url, body, authHeadersFor(_access_token));
+			}
+			else {
+				auto refreshed = _token_refresh_callback();
+				if (refreshed.isSuccess() && refreshed.hasValue()) {
+					_access_token = *refreshed.value;
+					response = client.post(url, body, authHeadersFor(_access_token));
+				}
+			}
+		}
+		return response;
 	}
 
 	Result<void> Client::validateAuthentication() const {
@@ -99,10 +157,7 @@ namespace smartthings4cpp {
 		}
 
 		try {
-			HttpClient client;
-			client.setTimeout(REQUEST_TIMEOUT);
-
-			auto response = client.get(_base_url + "/devices?max=1", authHeaders());
+			auto response = getWithAuth(_base_url + "/devices?max=1");
 
 			if (response.isSuccess()) {
 				return Result<void>();
@@ -141,16 +196,12 @@ namespace smartthings4cpp {
 		}
 
 		try {
-			HttpClient client;
-			client.setTimeout(REQUEST_TIMEOUT);
-
 			std::string url = _base_url + path;
-			auto headers = authHeaders();
 
 			// Follow _links.next until the API stops handing out pages. The bound
 			// is a safety net against a misbehaving server returning a cycle.
 			for (int page = 0; page < 1000 && !url.empty(); ++page) {
-				auto response = client.get(url, headers);
+				auto response = getWithAuth(url);
 				if (!response.isSuccess()) {
 					break;
 				}
@@ -181,8 +232,8 @@ namespace smartthings4cpp {
 		return items;
 	}
 
-	std::vector<std::unique_ptr<Device>> Client::getDevices() {
-		std::vector<std::unique_ptr<Device>> devices;
+	std::vector<std::shared_ptr<Device>> Client::getDevices() {
+		std::vector<std::shared_ptr<Device>> devices;
 
 		auto items = fetchAllItems("/devices");
 		for (const auto& item : items) {
@@ -190,24 +241,22 @@ namespace smartthings4cpp {
 			if (id.empty()) {
 				continue;
 			}
-			auto device = std::make_unique<Device>(id, this);
+			auto device = std::make_shared<Device>(id, this);
 			device->initFromJson(item);
+			registerDevice(device);
 			devices.push_back(std::move(device));
 		}
 
 		return devices;
 	}
 
-	std::unique_ptr<Device> Client::getDevice(const std::string& device_id) {
+	std::shared_ptr<Device> Client::getDevice(const std::string& device_id) {
 		if (!isAuthenticated() || device_id.empty()) {
 			return nullptr;
 		}
 
 		try {
-			HttpClient client;
-			client.setTimeout(REQUEST_TIMEOUT);
-
-			auto response = client.get(_base_url + "/devices/" + device_id, authHeaders());
+			auto response = getWithAuth(_base_url + "/devices/" + device_id);
 			if (!response.isSuccess()) {
 				return nullptr;
 			}
@@ -215,8 +264,9 @@ namespace smartthings4cpp {
 			auto json_response = json_utils::parse(response.body);
 			std::string id = json_utils::getValueOr<std::string>(json_response, "deviceId", device_id);
 
-			auto device = std::make_unique<Device>(id, this);
+			auto device = std::make_shared<Device>(id, this);
 			device->initFromJson(json_response);
+			registerDevice(device);
 			return device;
 		}
 		catch (const std::exception&) {
@@ -268,10 +318,7 @@ namespace smartthings4cpp {
 		}
 
 		try {
-			HttpClient client;
-			client.setTimeout(REQUEST_TIMEOUT);
-
-			auto response = client.get(_base_url + "/devices/" + device_id + "/status", authHeaders());
+			auto response = getWithAuth(_base_url + "/devices/" + device_id + "/status");
 			if (!response.isSuccess()) {
 				return nlohmann::json(nullptr);
 			}
@@ -289,12 +336,9 @@ namespace smartthings4cpp {
 		}
 
 		try {
-			HttpClient client;
-			client.setTimeout(REQUEST_TIMEOUT);
-
 			std::string url = _base_url + "/devices/" + device_id + "/components/" + component_id
 				+ "/capabilities/" + capability_id + "/status";
-			auto response = client.get(url, authHeaders());
+			auto response = getWithAuth(url);
 			if (!response.isSuccess()) {
 				return nlohmann::json(nullptr);
 			}
@@ -314,12 +358,8 @@ namespace smartthings4cpp {
 		}
 
 		try {
-			HttpClient client;
-			client.setTimeout(REQUEST_TIMEOUT);
-
 			std::string body = commands.dump();
-			auto response = client.post(_base_url + "/devices/" + device_id + "/commands",
-				body, authHeaders());
+			auto response = postWithAuth(_base_url + "/devices/" + device_id + "/commands", body);
 
 			if (response.isSuccess()) {
 				// 200 OK or 207 Multi-Status: the command was accepted.
@@ -353,6 +393,119 @@ namespace smartthings4cpp {
 			return Result<void>(ErrorCode::UnknownError,
 				std::string("Command error: ") + e.what());
 		}
+	}
+
+	void Client::registerDevice(const std::shared_ptr<Device>& device) {
+		if (!device) {
+			return;
+		}
+
+		std::lock_guard<std::mutex> lock(_registryMutex);
+		auto& bucket = _deviceRegistry[device->Id.Get()];
+
+		// Opportunistic prune: drop expired entries for this id while the lock
+		// is already held, so a Manual-mode Client that never calls pollNow()
+		// (and so never hits snapshotRegistry()'s full prune) doesn't grow this
+		// bucket unboundedly across repeated getDevice() calls for the same id.
+		bucket.erase(
+			std::remove_if(bucket.begin(), bucket.end(),
+				[](const std::weak_ptr<Device>& w) { return w.expired(); }),
+			bucket.end());
+
+		bucket.push_back(device);
+	}
+
+	std::vector<std::pair<std::string, std::vector<std::shared_ptr<Device>>>> Client::snapshotRegistry() {
+		std::vector<std::pair<std::string, std::vector<std::shared_ptr<Device>>>> snapshot;
+
+		std::lock_guard<std::mutex> lock(_registryMutex);
+		for (auto it = _deviceRegistry.begin(); it != _deviceRegistry.end(); ) {
+			auto& [id, weakDevices] = *it;
+
+			std::vector<std::shared_ptr<Device>> live;
+			live.reserve(weakDevices.size());
+			for (auto& w : weakDevices) {
+				if (auto locked = w.lock()) {
+					live.push_back(std::move(locked));
+				}
+			}
+
+			if (live.empty()) {
+				// Nothing survived: this id has no live Device left, drop it
+				// entirely rather than leaving an empty bucket behind.
+				it = _deviceRegistry.erase(it);
+				continue;
+			}
+
+			weakDevices.clear();
+			for (auto& d : live) {
+				weakDevices.push_back(d);
+			}
+			snapshot.emplace_back(id, std::move(live));
+			++it;
+		}
+
+		return snapshot;
+	}
+
+	void Client::pollNow() {
+		for (auto& [deviceId, devices] : snapshotRegistry()) {
+			auto status = getDeviceStatus(deviceId);
+			if (status.is_null() || !status.is_object()) {
+				continue; // offline/rate-limited/error: retried next cycle
+			}
+			for (auto& device : devices) {
+				device->applyStatus(status);
+			}
+		}
+	}
+
+	void Client::startPolling() {
+		if (_pollingRunning) {
+			return;
+		}
+		_pollingRunning = true;
+
+		_pollingThread = std::thread([this]() {
+			std::unique_lock<std::mutex> lock(_pollingMutex);
+			while (_pollingRunning) {
+				auto interval = _pollingInterval;
+				lock.unlock();
+				pollNow();
+				lock.lock();
+				_pollingCv.wait_for(lock, interval, [this]() { return !_pollingRunning.load(); });
+			}
+		});
+	}
+
+	void Client::stopPolling() {
+		if (!_pollingRunning) {
+			return;
+		}
+
+		{
+			std::lock_guard<std::mutex> lock(_pollingMutex);
+			_pollingRunning = false;
+		}
+		_pollingCv.notify_all();
+
+		if (_pollingThread.joinable()) {
+			_pollingThread.join();
+		}
+	}
+
+	bool Client::isPolling() const {
+		return _pollingRunning;
+	}
+
+	void Client::setPollingInterval(std::chrono::milliseconds interval) {
+		std::lock_guard<std::mutex> lock(_pollingMutex);
+		_pollingInterval = std::max(interval, MIN_POLLING_INTERVAL);
+	}
+
+	std::chrono::milliseconds Client::getPollingInterval() const {
+		std::lock_guard<std::mutex> lock(_pollingMutex);
+		return _pollingInterval;
 	}
 
 } // namespace smartthings4cpp

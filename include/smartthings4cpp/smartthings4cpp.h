@@ -11,11 +11,14 @@
 #include "smartthings4cpp/exceptions.h"
 #include "smartthings4cpp/http_client.h"
 #include "smartthings4cpp/json_utils.h"
+#include "smartthings4cpp/base64.h"
 #include "smartthings4cpp/capability.h"
 #include "smartthings4cpp/capabilities.h"
 #include "smartthings4cpp/component.h"
 #include "smartthings4cpp/client.h"
 #include "smartthings4cpp/device.h"
+#include "smartthings4cpp/oauth2/oauth2_types.h"
+#include "smartthings4cpp/oauth2/oauth2_authenticator.h"
 
 /**
  * @namespace smartthings4cpp
