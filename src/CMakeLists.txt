@@ -3,7 +3,10 @@ set(SMARTTHINGS4CPP_SOURCES
     client.cpp
     device.cpp
     capability.cpp
+    webhook.cpp
     http_client.cpp
+    http_server.cpp
+    storage.cpp
     json_utils.cpp
     base64.cpp
     oauth2/oauth2_authenticator.cpp
@@ -65,10 +68,15 @@ target_link_libraries(smartthings4cpp
         nlohmann_json::nlohmann_json
         ReactiveLitepp::ReactiveLitepp
         Threads::Threads
+    PRIVATE
+        # Embedded webhook/OAuth server - implementation detail of
+        # http_server.cpp only (never appears in a public header).
+        httplib::httplib
 )
 
 if (WIN32)
-    target_link_libraries(smartthings4cpp PUBLIC ws2_32)
+    # advapi32: Windows Credential Manager (Cred* APIs) used by storage.cpp.
+    target_link_libraries(smartthings4cpp PUBLIC ws2_32 PRIVATE advapi32)
     # windows.h (pulled in transitively via cpr/curl) defines max/min macros
     # that shadow std::max/std::min unless this is set - needed for the
     # polling interval clamp in client.cpp. PUBLIC so consumers (examples,

@@ -116,7 +116,7 @@ TEST_CASE("setPollingInterval clamps to the minimum", "[client][polling]") {
 	REQUIRE(client.getPollingInterval() == std::chrono::milliseconds(30000));
 }
 
-TEST_CASE("startPolling()/stopPolling() lifecycle runs and stops promptly", "[client][polling]") {
+TEST_CASE("startPolling()/stopPolling() messageType runs and stops promptly", "[client][polling]") {
 	Client client(PollingMode::Manual);
 	REQUIRE_FALSE(client.isPolling());
 

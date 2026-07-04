@@ -1,17 +1,25 @@
 #pragma once
 
 #include "types.h"
+#include "webhook.h"
+#include "http_server.h"
+#include "storage.h"
+#include "oauth2/oauth2_types.h"
+#include <ReactiveLitepp/Event.h>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <filesystem>
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <nlohmann/json_fwd.hpp>
+#include <optional>
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 /**
@@ -45,19 +53,31 @@ namespace smartthings4cpp {
 		Manual     ///< No background polling; call Client::pollNow() yourself
 	};
 
+	// Forward declaration (full type only needed in client.cpp).
+	namespace oauth2 { class OAuth2Authenticator; }
+
 	/**
 	 * @brief Main entry point for interacting with a SmartThings account
 	 *
 	 * Unlike a local Hue bridge, SmartThings is a cloud service: there is no
-	 * network discovery and no link-button pairing. Instead the Client is
-	 * configured with an OAuth 2.0 Bearer token (a Personal Access Token, PAT,
-	 * for this iteration) and talks to https://api.smartthings.com/v1.
+	 * network discovery and no link-button pairing. The Client talks to
+	 * https://api.smartthings.com/v1 and comes in two flavors, chosen by
+	 * constructor:
 	 *
-	 * Once authenticated, the Client discovers devices (with their components and
-	 * capabilities), locations and rooms.
+	 * - **PAT mode** - construct with a Personal Access Token. Live updates
+	 *   come from automatic background polling (see PollingMode), since a PAT
+	 *   cannot subscribe to events.
+	 * - **OAuth mode** - construct with an OAuth-In App's OAuth2Config. The
+	 *   Client runs the authorization flow itself (see authenticate() /
+	 *   openBrowserRequested), persists tokens across runs, receives real push
+	 *   events on an embedded (or injected, see IHttpServer) local HTTP server,
+	 *   and manages device event subscriptions automatically - each Device it
+	 *   hands out is subscribed on creation and unsubscribed when the last
+	 *   Device object for that id is destroyed. No polling.
 	 *
-	 * @note Sending commands and reading live device status will be added in the
-	 *       device-control iteration via this same Client.
+	 * In both modes the Client discovers devices (with their components and
+	 * capabilities), locations and rooms, and updates arrive through the same
+	 * reactive PropertyChanged events.
 	 */
 	class Client {
 	public:
@@ -78,6 +98,54 @@ namespace smartthings4cpp {
 		 *        (see PollingMode). Defaults to PollingMode::Automatic.
 		 */
 		explicit Client(const std::string& access_token, PollingMode pollingMode = PollingMode::Automatic);
+
+		/**
+		 * @brief Construct an OAuth Client with everything embedded (recommended)
+		 *
+		 * Runs the whole OAuth + events story autonomously: an embedded local
+		 * HTTP server handles both the OAuth redirect and the SmartThings
+		 * webhook, tokens persist across runs (Windows Credential Manager /
+		 * file storage - see storage.h), and device event subscriptions are
+		 * created and deleted automatically as Device objects come and go. The
+		 * one thing the library never does itself is open a browser: subscribe
+		 * to openBrowserRequested and present the URL, then call authenticate().
+		 *
+		 * The webhook route must be reachable from the SmartThings cloud over
+		 * HTTPS: front the local port with a tunnel (e.g. @c ngrok @c http
+		 * @c <port>) and register that public URL as the app's Target URL. The
+		 * OAuth redirect works directly against
+		 * @c http://localhost:<port><oauthCallbackRoute>, which must match a
+		 * redirect URI registered on the app.
+		 *
+		 * No background polling in OAuth mode - webhook events drive updates
+		 * (startPolling() remains available as a manual opt-in).
+		 * @param config Your OAuth-In App's clientId/clientSecret/scopes
+		 * @param port Local port for the embedded server (0 = pick a free one)
+		 * @param oauthCallbackRoute Path of the OAuth redirect route, e.g. "/oauth/callback"
+		 * @param webhookCallbackRoute Path of the webhook route, e.g. "/webhook"
+		 * @param externalUri The public HTTPS URL of the oAuth and webhook routes, e.g. "https://<tunnel>/webhook"
+		 * @param workingDir Persistent directory for the default storage
+		 *        (created if missing; also the token fallback store on
+		 *        platforms without a native keychain backend)
+		 */
+		Client(oauth2::OAuth2Config config, int port, std::string oauthCallbackRoute,
+			std::string webhookCallbackRoute, std::string externalUri, std::filesystem::path workingDir);
+
+		/**
+		 * @brief Construct an OAuth Client from injected implementations
+		 *
+		 * Same autonomous behavior as the embedded-server constructor, but you
+		 * supply the pieces: an IHttpServer bridging your app's own HTTP stack,
+		 * and IStorageProvider implementations for secrets (tokens) and plain
+		 * state. Client binds the server's callbacks and starts it.
+		 * @param config Your OAuth-In App's clientId/clientSecret/scopes
+		 * @param httpServer Receives the OAuth redirect + webhook requests
+		 * @param keychainProvider Secret storage (the OAuth token pair)
+		 * @param storageProvider Plain state storage (installed-app id)
+		 */
+		Client(oauth2::OAuth2Config config, std::unique_ptr<IHttpServer> httpServer,
+			std::unique_ptr<IStorageProvider> keychainProvider,
+			std::unique_ptr<IStorageProvider> storageProvider);
 
 		/**
 		 * @brief Destructor
@@ -272,6 +340,131 @@ namespace smartthings4cpp {
 		 */
 		void registerDevice(const std::shared_ptr<Device>& device);
 
+		// --- OAuth: authentication + events ---------------------------------
+		// Real push, in place of polling, for an OAuth "API Access" app. With
+		// an OAuth-mode Client everything below runs automatically: the
+		// embedded (or injected) IHttpServer receives the OAuth redirect and
+		// the webhook, tokens persist across runs, and device subscriptions
+		// are created/deleted with the Device objects themselves - events fire
+		// the same PropertyChanged polling would. Typical use is just:
+		//   client.openBrowserRequested += [](std::string url) { /* open it */ };
+		//   client.authenticate();
+		//   client.waitForAuthentication(std::chrono::minutes(5));
+		// The subscription/webhook methods further below are escape hatches -
+		// normal consumers never call them.
+
+		/**
+		 * @brief Fired when the user's consent is needed: present this URL
+		 *
+		 * The one manual step of the OAuth flow. Fired by authenticate() when
+		 * no stored token can be (re)used; open the URL in a browser (or show
+		 * it to the user). Once the redirect lands on the embedded/injected
+		 * server, authentication finishes by itself - observe
+		 * authenticationCompleted or block in waitForAuthentication().
+		 */
+		ReactiveLitepp::Event<std::string> openBrowserRequested;
+
+		/**
+		 * @brief Fired when an authentication attempt finishes
+		 *
+		 * Success after the browser round-trip (or a silent token refresh);
+		 * an error Result if the exchange/refresh failed (e.g. consent denied,
+		 * CSRF state mismatch, network failure).
+		 * @note Fires on the HTTP server's thread for the browser flow.
+		 */
+		ReactiveLitepp::Event<Result<void>> authenticationCompleted;
+
+		/**
+		 * @brief Make this OAuth Client authenticated, as silently as possible
+		 *
+		 * Tries, in order: the stored access token (if not expired), the stored
+		 * refresh token (rotating + persisting the new pair), and finally the
+		 * interactive flow - firing openBrowserRequested and returning
+		 * immediately. Call once at startup; tokens persisting across runs
+		 * means the browser typically only opens the very first time.
+		 * @return On success, @c true if authenticated right now, @c false if
+		 *         the browser step is pending (wait via waitForAuthentication()
+		 *         or authenticationCompleted). An error Result if this isn't an
+		 *         OAuth Client, the server failed to start, or a refresh failed
+		 *         for a reason consent can't fix (e.g. network down).
+		 */
+		Result<bool> authenticate();
+
+		/**
+		 * @brief Block until the pending authentication finishes (or times out)
+		 * @param timeout Maximum time to wait for the browser round-trip
+		 * @return The outcome (TimeoutError if nothing completed in time)
+		 */
+		Result<void> waitForAuthentication(std::chrono::milliseconds timeout);
+
+		/**
+		 * @brief Set the installed-app id that subscription calls target
+		 *
+		 * Normally learned automatically from the Install/Update messageType by
+		 * handleWebhook(); set it explicitly if you manage installation yourself.
+		 */
+		void setInstalledAppId(const std::string& installedAppId);
+
+		/** @brief The installed-app id in use (empty until known). */
+		std::string installedAppId() const;
+
+		/**
+		 * @brief Subscribe to a device's (or capability's) events
+		 *
+		 * POST /installedapps/{installedAppId}/subscriptions. Requires an
+		 * OAuth-mode Client and a known installedAppId(). Escape hatch: device
+		 * subscriptions are normally created automatically (see the class doc);
+		 * use this only for narrower-than-default subscriptions.
+		 * @param request What to subscribe to (see SubscriptionRequest)
+		 * @return The created Subscription, or an error Result
+		 */
+		Result<Subscription> subscribeTo(const SubscriptionRequest& request);
+
+		/**
+		 * @brief Subscribe to every currently-registered device (all capabilities)
+		 *
+		 * Convenience that issues one subscription per unique registered device.
+		 * Escape hatch - the same thing already happens automatically as devices
+		 * are created.
+		 * @return The number of subscriptions created, or an error Result
+		 */
+		Result<int> subscribeToAllDevices();
+
+		/**
+		 * @brief List the installed-app's current subscriptions
+		 * @return The subscriptions, or an error Result
+		 */
+		Result<std::vector<Subscription>> listSubscriptions();
+
+		/**
+		 * @brief Delete a single subscription by id
+		 * @param subscriptionId The Subscription::id to remove
+		 */
+		Result<void> deleteSubscription(const std::string& subscriptionId);
+
+		/** @brief Delete every subscription for the installed app. */
+		Result<void> deleteAllSubscriptions();
+
+		/**
+		 * @brief Process one webhook messageType request from SmartThings
+		 *
+		 * Called automatically by the embedded/injected IHttpServer for every
+		 * POST on the webhook route - exposed (public-but-internal, like
+		 * registerDevice()) for tests and for apps that receive the POST some
+		 * other way. Answers the PING/CONFIRMATION handshakes, captures the
+		 * installed-app id + token on Install/Update (then flushes any pending
+		 * automatic subscriptions), and on an EVENT dispatches each device
+		 * event onto every live Device for that id - firing PropertyChanged
+		 * just like a poll would. The returned WebhookResponse is what must go
+		 * back to SmartThings (status + JSON body, application/json).
+		 * @param rawBody The exact request body SmartThings POSTed
+		 * @return The HTTP response to return, plus which messageType was handled
+		 * @note This iteration does NOT cryptographically verify the request
+		 *       signature; keep the endpoint behind a trusted tunnel. Signature
+		 *       verification is a planned follow-up.
+		 */
+		WebhookResponse handleWebhook(const std::string& rawBody);
+
 		/**
 		 * @brief Override the API base URL (mainly for testing / mocking)
 		 * @param url Base URL without a trailing slash (e.g. the default
@@ -312,6 +505,46 @@ namespace smartthings4cpp {
 		std::atomic<bool> _pollingRunning{ false };
 		std::chrono::milliseconds _pollingInterval{ DEFAULT_POLLING_INTERVAL }; // guarded by _pollingMutex
 
+		// OAuth-mode collaborators (all null on a PAT Client). The server runs
+		// its own thread and calls back into this Client (onOAuthRedirect /
+		// handleWebhook), so ~Client stops it before tearing anything else down.
+		bool _isOAuth = false;
+		oauth2::OAuth2Config _oauthConfig;
+		std::unique_ptr<oauth2::OAuth2Authenticator> _authenticator;
+		std::unique_ptr<IHttpServer> _httpServer;
+		std::unique_ptr<IStorageProvider> _keychain; // secrets: the OAuth token pair
+		std::unique_ptr<IStorageProvider> _storage;  // plain state: installed-app id
+		Result<void> _serverStart{ ErrorCode::InvalidRequest, "not an OAuth client" };
+
+		// waitForAuthentication() rendezvous with the async browser round-trip.
+		mutable std::mutex _authWaitMutex;
+		std::condition_variable _authWaitCv;
+		bool _authFinished = false;              // guarded by _authWaitMutex
+		Result<void> _authOutcome;               // guarded by _authWaitMutex
+
+		// Installed-app identity, learned from the token response (SmartThings
+		// includes installed_app_id) or the Install/Update messageType; guarded by
+		// _installMutex because handleWebhook() runs on the server thread.
+		mutable std::mutex _installMutex;
+		std::string _installedAppId;      // guarded by _installMutex
+		std::string _installedAppToken;   // guarded by _installMutex
+
+		// Automatic per-device subscriptions (OAuth mode). All guarded by
+		// _subscriptionMutex; network calls always happen with it released.
+		mutable std::mutex _subscriptionMutex;
+		std::unordered_map<std::string, std::string> _subscribedDevices;   // deviceId -> subscriptionId
+		std::unordered_set<std::string> _pendingSubscriptions;             // waiting for auth/appId/429-retry
+		std::unordered_set<std::string> _subscriptionsInFlight;            // create in progress
+		std::unordered_map<std::string, std::string> _unclaimedSubscriptions; // prior-run leftovers to adopt
+		bool _unclaimedLoaded = false;
+
+		// Lets the shared_ptr<Device> custom deleter reach back into this Client
+		// safely: the deleter holds a weak_ptr to this hub, and ~Client disarms
+		// it, so a Device destroyed after its Client is a silent no-op instead
+		// of a dangling call.
+		struct DeviceLifetimeHub;
+		std::shared_ptr<DeviceLifetimeHub> _lifetimeHub;
+
 		/// Build the Authorization (and Accept) headers for an authenticated
 		/// request using an explicitly-supplied token (never reads _access_token
 		/// directly, so callers must have already safely obtained one - see
@@ -337,6 +570,62 @@ namespace smartthings4cpp {
 		/// returns {deviceId, live devices} pairs for pollNow() to act on outside
 		/// the lock.
 		std::vector<std::pair<std::string, std::vector<std::shared_ptr<Device>>>> snapshotRegistry();
+
+		/// Under _registryMutex: lock (and prune) the registry bucket for one
+		/// device id, returning its currently-live Device objects. Used to fan a
+		/// single webhook device event out to every Device wrapping that id.
+		std::vector<std::shared_ptr<Device>> liveDevicesFor(const std::string& deviceId);
+
+		/// Token used for /installedapps subscription calls: the installed-app
+		/// token captured from the messageType if present, else the access token.
+		std::string subscriptionToken() const;
+
+		/// Create a registry-tracked Device whose destruction (of the last
+		/// instance for its id) tears its automatic subscription down via
+		/// _lifetimeHub. Used by getDevices()/getDevice().
+		std::shared_ptr<Device> makeTrackedDevice(const std::string& id);
+
+		/// Called (via _lifetimeHub) when a tracked Device is destroyed: prunes
+		/// the registry and, if that was the last Device for the id, deletes its
+		/// automatic subscription.
+		void onDeviceReleased(const std::string& deviceId);
+
+		/// OAuth redirect landing (server thread): exchanges the code, persists
+		/// the token, flushes pending subscriptions, completes authentication.
+		void onOAuthRedirect(std::string args);
+
+		/// Persist + adopt a freshly-obtained token pair: keychain write,
+		/// _access_token update, installed-app id capture, pending-subscription
+		/// flush. NOT for use inside getWithAuth()'s 401 path (locks _authMutex).
+		void applyOAuthToken(const oauth2::OAuth2Token& token);
+
+		/// Keychain-only write of the token blob (merges the previous refresh
+		/// token / installed-app id when the new token omits them). Safe under
+		/// _authMutex - touches no Client mutex itself.
+		void persistOAuthToken(const oauth2::OAuth2Token& token) const;
+
+		/// Keychain-only read of the persisted token blob.
+		std::optional<oauth2::OAuth2Token> loadPersistedOAuthToken() const;
+
+		/// Record the installed-app id (in memory + plain storage) if non-empty.
+		void adoptInstalledAppId(const std::string& installedAppId);
+
+		/// Record an authentication outcome: wakes waitForAuthentication() and
+		/// fires authenticationCompleted.
+		void completeAuthentication(const Result<void>& outcome);
+
+		/// Ensure the given device id has an automatic subscription (OAuth mode):
+		/// adopt a prior run's, create one, or park it as pending until
+		/// authentication/installed-app id/rate-limit allows.
+		void maybeSubscribeDevice(const std::string& deviceId);
+
+		/// Retry every pending automatic subscription (called after
+		/// authentication completes and after Install/Update lifecycles).
+		void flushPendingSubscriptions();
+
+		/// One-shot listSubscriptions() to adopt prior-run subscriptions instead
+		/// of re-creating them (subscription writes are rate-limited).
+		void loadUnclaimedSubscriptionsOnce();
 	};
 
 } // namespace smartthings4cpp

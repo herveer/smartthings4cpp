@@ -218,6 +218,23 @@ namespace smartthings4cpp {
 		 */
 		Result<void> applyStatus(const nlohmann::json& status) const;
 
+		/**
+		 * @brief Apply a single attribute change delivered by a webhook device event
+		 *
+		 * Locates the capability by component/capability id and forwards the new
+		 * value to Capability::applyAttributeEvent(), firing PropertyChanged
+		 * through the usual Component/Device relay. Unlike getComponent()/
+		 * getCapability(), this walks the already-built component list directly
+		 * and never triggers ensureRefreshed() - an inbound event must not cause
+		 * an outbound status fetch.
+		 * @return true if a matching capability was found and updated
+		 * @note Called by Client when it dispatches a SmartThings deviceEvent (see
+		 *       Client::handleWebhook()); the device need not have been refreshed
+		 *       first (initFromJson() already created the capability objects).
+		 */
+		bool applyDeviceEvent(const std::string& componentId, const std::string& capability,
+			const std::string& attribute, const nlohmann::json& value) const;
+
 		friend class Client;
 	};
 

@@ -23,6 +23,7 @@ namespace oauth2 {
     struct OAuth2Config {
         std::string clientId;
         std::string clientSecret;
+        std::string appUri;
         std::vector<std::string> scopes = { "r:devices:*", "x:devices:*", "r:locations:*" };
         std::string authorizeUrl = "https://api.smartthings.com/oauth/authorize";
         std::string tokenUrl = "https://api.smartthings.com/oauth/token";
@@ -36,6 +37,10 @@ namespace oauth2 {
         std::string refreshToken;
         std::string tokenType;   ///< Normally "bearer"
         std::string scope;
+        /// Identifier of the app installation this token belongs to, when the
+        /// token endpoint provides it (SmartThings includes installed_app_id
+        /// for API Access apps). This is what the Subscriptions API is keyed on.
+        std::string installedAppId;
         std::chrono::system_clock::time_point issuedAt;
         std::chrono::seconds expiresIn{ 0 };
 

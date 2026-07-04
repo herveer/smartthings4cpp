@@ -235,6 +235,7 @@ namespace oauth2 {
 				token.refreshToken = json_utils::getValueOr<std::string>(json_response, "refresh_token", "");
 				token.tokenType = json_utils::getValueOr<std::string>(json_response, "token_type", "");
 				token.scope = json_utils::getValueOr<std::string>(json_response, "scope", "");
+				token.installedAppId = json_utils::getValueOr<std::string>(json_response, "installed_app_id", "");
 				token.issuedAt = std::chrono::system_clock::now();
 				token.expiresIn = std::chrono::seconds{
 					json_utils::getValueOr<long long>(json_response, "expires_in", 0) };

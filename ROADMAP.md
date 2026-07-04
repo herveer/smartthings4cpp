@@ -21,7 +21,7 @@ reactive pattern of [reactivelitepp](https://github.com/herveer/reactivelitepp).
 | TLS | Self-signed (verification off) | Public certificates (verification on) |
 | Entry point | `Bridge` | `Client` |
 | Resources | Lights, sensors, devices | Devices → components → capabilities |
-| Real-time | Server-Sent Events | Automatic background polling (`Client`) today; webhooks/subscriptions once OAuth2 app creation is unblocked |
+| Real-time | Server-Sent Events | Automatic background polling (PAT) **or** OAuth webhook event subscriptions (`Client::subscribeTo` + `Client::handleWebhook`) |
 
 ---
 
@@ -97,13 +97,41 @@ a typed class deriving from a polymorphic `Capability` base.
       polling alone reproduces "notified only on real change" for free. Works
       under either PAT or OAuth2 - it's the PAT-friendly stand-in while push
       isn't provisionable (see below). Example: `examples/live_updates.cpp`.
-- [ ] SmartThings subscriptions / webhooks (or SSE where available) - **blocked**:
-      Samsung is mid-migration from classic SmartApps to a new "API Integration
-      App" model, and as of 2026-07 there is no way to create a new OAuth2 app at
-      all, so this can't be provisioned or tested yet even though the OAuth2 flow
-      itself (Phase 4) is implemented and ready. Revisit once app creation is
-      possible again; automatic polling stays as the fallback for PAT users either way.
-- [ ] Event-driven examples (once the above is unblocked)
+- [x] SmartThings event subscriptions + webhook - real push for an OAuth "API
+      Access App", unblocked once we learned to create one via the SmartThings CLI
+      (`smartthings apps:create` → OAuth-In App; the Console menus aren't live yet).
+      `Client::subscribeTo`/`subscribeToAllDevices` create subscriptions
+      (`POST /installedapps/{id}/subscriptions`); `Client::handleWebhook()` answers
+      the PING/CONFIRMATION handshakes, captures the installed-app id + token on
+      Install/Update (firing `setOnInstalled()`), and dispatches each device EVENT
+      onto the live `Device` objects via the *same* reactive path as polling
+      (`Capability::setLocalAttribute` → `PropertyChanged`) - so one subscription
+      to `Device::PropertyChanged` works whether updates arrive by poll or push.
+      The library does the protocol only; the consumer hosts the endpoint (ngrok in
+      dev), mirroring how OAuth2 leaves the browser/redirect to the consumer.
+      `AuthMode::OAuth` makes an OAuth client default to events (no polling).
+- [x] Event-driven example: `examples/event_updates.cpp` (also exercises the
+      lifecycle offline so it's runnable without a public server).
+- [x] **Autonomous OAuth Client** - the manual wiring above judged too complex
+      for consumers and folded into `Client` (same transparency rework polling
+      got): an OAuth-mode `Client` now embeds a small local HTTP server
+      (cpp-httplib, 127.0.0.1; public HTTPS terminates at a tunnel like ngrok)
+      serving both the OAuth redirect and the webhook, runs the authorization
+      flow itself (`authenticate()` + `openBrowserRequested` event - opening
+      the browser is the single manual step), persists tokens across runs via
+      `IStorageProvider` (Windows Credential Manager for secrets, JSON file
+      otherwise), and manages device event subscriptions **automatically**:
+      each `Device` is subscribed when created (adopting a prior run's
+      subscription when possible - subscription writes are rate-limited) and
+      unsubscribed when its last `shared_ptr` dies. Custom apps inject their
+      own `IHttpServer`/`IStorageProvider` implementations via the DI
+      constructor. All the manual calls (`subscribeTo`, `handleWebhook`, ...)
+      remain public as escape hatches.
+- [ ] Cryptographic webhook signature verification (HTTP-Signature + ST public-key
+      retrieval) - this iteration parses the payload but does not yet verify the
+      sender; run the endpoint behind a trusted tunnel until this lands.
+- [ ] Enterprise SSE "sink" eventing (outbound long-lived connection, no public
+      receiver) - gated/unavailable on a self-created OAuth-In app; revisit if access opens up.
 
 ---
 
@@ -115,9 +143,11 @@ a typed class deriving from a polymorphic `Capability` base.
       captures the redirect itself, so any UX (browser + paste-back, a webview, a
       local listener, ...) can drive it. `Client::setTokenRefreshCallback()` makes
       401-triggered refresh transparent to callers. See `examples/oauth2_authentication.cpp`.
-- [ ] Token storage via OS keychains (Windows Credential Manager, macOS Keychain,
-      Linux libsecret) - the example persists to a plain-text JSON file for now,
-      same caveat as the PAT example
+- [x] Token storage via the OS keychain on **Windows** (Credential Manager,
+      entries named `smartthings4cpp/<key>`) - the OAuth Client's default
+      secret store, behind the `IStorageProvider` interface
+- [ ] Native macOS Keychain / Linux libsecret backends - those platforms
+      currently fall back to a JSON file in the Client's working directory
 - [ ] SmartApp registration guidance - covered minimally by the new README section
       and the example's startup instructions; could grow into a dedicated guide
 
@@ -144,15 +174,15 @@ a typed class deriving from a polymorphic `Capability` base.
 
 ---
 
-**Last Updated**: 2026-07-01
-**Current Phase**: Phase 3 — automatic, deduplicated live updates ✅ (`Client`
-polls in the background by default); Phase 4 — OAuth 2.0 authorization-code
-flow ✅ (token storage via OS keychains and deeper SmartApp registration
-guidance remain open)
-**Next Step**: real push (webhooks/subscriptions) is blocked - Samsung is mid-migration
-from classic SmartApps to a new "API Integration App" model and there is currently no
-way to create a new OAuth2 app at all. Automatic `Client` polling is the working
-mechanism for PAT users in the meantime. Once app creation is possible again: register a real OAuth-In
-App, spike the (as of 2026-07 undocumented/unstable) SSE-style `/subscriptions`
-endpoint, and fall back to the classic webhook/lifecycle-handler path if that isn't
-viable. Also open: more standard capabilities (colorControl, lock, ...) as needed.
+**Last Updated**: 2026-07-04
+**Current Phase**: Phase 3 — real-time updates ✅ both mechanisms shipped and
+**autonomous**: PAT clients poll automatically; OAuth clients embed their own
+OAuth/webhook server, self-authenticate (browser opening is the single manual
+step), persist tokens (Windows Credential Manager), and manage device event
+subscriptions with `Device` lifetimes — no consumer wiring in either mode.
+Phase 4 — OAuth 2.0 flow ✅, Windows keychain storage ✅ (macOS/Linux native
+backends still open)
+**Next Step**: harden the webhook path — cryptographic signature verification of
+inbound lifecycle requests (currently unverified; keep the endpoint behind a
+trusted tunnel), then native macOS/Linux keychain backends and more standard
+capabilities (colorControl, lock, ...) as needed.

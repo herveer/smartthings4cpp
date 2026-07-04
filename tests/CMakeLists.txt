@@ -10,6 +10,9 @@ set(TEST_SOURCES
     json_utils_tests.cpp
     types_tests.cpp
     oauth2_authenticator_tests.cpp
+    webhook_tests.cpp
+    storage_tests.cpp
+    http_server_tests.cpp
 )
 
 # Create test executable

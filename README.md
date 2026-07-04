@@ -35,8 +35,14 @@ the SmartThings cloud simple and intuitive.
   out in the background by default (opt out with `PollingMode::Manual`, or drive
   updates yourself with `pollNow()`); `PropertyChanged` fires only for attributes
   that actually changed, and fetching the same device id more than once still
-  polls it only once per cycle. Works under a PAT — SmartThings only pushes real
-  subscription/webhook events to an OAuth2-authorized app
+  polls it only once per cycle. The PAT-friendly stand-in for real push
+- 📨 **Real push (OAuth events), autonomous** — an OAuth `Client` embeds a small
+  local HTTP server for the OAuth redirect **and** the SmartThings webhook, runs
+  the authorization flow itself (`authenticate()`; you only open the browser),
+  persists tokens across runs (Windows Credential Manager / file storage), and
+  creates/deletes device event subscriptions automatically as `Device` objects
+  come and go — same `PropertyChanged`, no polling. Custom apps can inject their
+  own `IHttpServer`/`IStorageProvider` implementations instead
 - 📦 **vcpkg + CMake** — easy dependency management and integration
 - 🔧 **Cross-platform** — Windows, Linux, and macOS
 
@@ -51,6 +57,8 @@ the SmartThings cloud simple and intuitive.
 All dependencies are managed via vcpkg:
 
 - **cpr** — HTTP client (built on libcurl)
+- **cpp-httplib** — the embedded OAuth/webhook HTTP server (implementation detail,
+  never exposed in public headers)
 - **nlohmann-json** — JSON parsing and serialization
 - **reactivelitepp** — reactive properties / observable objects
 - **Catch2** — unit testing framework
@@ -72,12 +80,12 @@ provided).
 
 ## Using OAuth2
 
-> ⚠️ **Currently blocked for new apps:** Samsung is mid-migration from classic
-> SmartApps to a new "API Integration App" model, and as of 2026-07 there is no
-> way to create a new OAuth2 app at all. The flow below is implemented and
-> ready, but you can't provision an app to use it with yet — see
-> [Live updates (polling)](#live-updates-polling) for the working alternative
-> in the meantime.
+> ℹ️ **Create the app with the CLI, not the Console.** Samsung is mid-migration
+> to the new "API Access App" model and the Console menus for it aren't live yet,
+> but you can still create one with the SmartThings CLI (`smartthings apps:create`
+> → **OAuth-In App**) — confirmed by SmartThings developer support. Once created,
+> the flow below works end to end, including **real push** (see
+> [Live updates (events)](#live-updates-events)).
 
 For longer-lived integrations, register your own SmartThings **OAuth-In App**
 instead of using a PAT — the same self-service model, just with a refreshable
@@ -170,6 +178,63 @@ Construct with `Client client(token, PollingMode::Manual);` to opt out of
 automatic polling entirely - `Client::pollNow()` is then available to drive a
 single poll cycle yourself (your own timer/thread) whenever you want one.
 Run `examples/live_updates` for a full working version.
+
+## Live updates (events)
+
+With an OAuth **API Access App**, SmartThings delivers *real* push instead of
+polling — and an OAuth-mode `Client` handles the whole story autonomously: it
+embeds a small local HTTP server for both the OAuth redirect and the SmartThings
+webhook, persists tokens across runs (so only the very first run needs a
+browser), and creates/deletes device event subscriptions automatically as
+`Device` objects come and go. The **only** manual step is opening the browser:
+
+```cpp
+#include <smartthings4cpp/smartthings4cpp.h>
+
+using namespace smartthings4cpp;
+
+oauth2::OAuth2Config config;
+config.clientId = "...";      // from `smartthings apps:create` (OAuth-In App)
+config.clientSecret = "...";
+
+// Embedded server on port 9753; tokens persisted under ./st4cpp-data
+// (secrets go to the Windows Credential Manager on Windows).
+Client client(config, 9753, "/oauth/callback", "/webhook", "./st4cpp-data");
+
+client.openBrowserRequested += [](std::string url) {
+    std::cout << "Open this URL to authorize:\n" << url << "\n";
+};
+
+client.authenticate();                                    // silent when a stored token works
+client.waitForAuthentication(std::chrono::minutes(5));    // only blocks on the first run
+
+auto devices = client.getDevices();   // each device auto-subscribed to push events
+auto sub = devices.front()->PropertyChanged.SubscribeScoped(
+    [](ObservableObject&, PropertyChangedArgs args) {
+        std::cout << "changed: " << args.PropertyName() << "\n";  // pushed, not polled
+    });
+```
+
+One-time app setup: register `http://localhost:9753/oauth/callback` as a
+redirect URI on the app, run a tunnel so SmartThings can reach the webhook over
+public HTTPS (`ngrok http 9753`), and set the app's Target URL to
+`https://<your-tunnel>/webhook`. TLS terminates at the tunnel; the embedded
+server itself listens on `127.0.0.1` only.
+
+Apps that already run their own HTTP stack or want different persistence can
+inject implementations instead of using the embedded defaults:
+
+```cpp
+Client client(config, std::move(myHttpServer),      // your IHttpServer
+    std::move(mySecretStore), std::move(myStore));  // your IStorageProvider x2
+```
+
+Run `examples/event_updates` for the full working version. Everything the old
+manual wiring did (`subscribeTo`, `handleWebhook`, ...) is still public as an
+escape hatch, but normal consumers never touch it.
+
+> ⚠️ This iteration does not yet cryptographically verify the webhook signature —
+> keep the endpoint behind your trusted tunnel. Signature verification is planned.
 
 ## Building
 
@@ -280,6 +345,18 @@ $env:SMARTTHINGS_TOKEN = "<your-pat>"
 ./build/examples/live_updates
 ```
 
+The `event_updates` example is the OAuth push counterpart: fully autonomous —
+it authenticates itself (printing the authorize URL for you to open, first run
+only), receives events on its embedded server, and prints every change pushed
+by SmartThings. See [Live updates (events)](#live-updates-events) for the
+one-time app/tunnel setup.
+
+```bash
+$env:SMARTTHINGS_CLIENT_ID = "<your-oauth-in-app-client-id>"
+$env:SMARTTHINGS_CLIENT_SECRET = "<your-oauth-in-app-client-secret>"
+./build/examples/event_updates
+```
+
 ## Usage
 
 ```cpp
@@ -325,8 +402,11 @@ smartthings4cpp/
 ├── overlay-ports/              # Backup vcpkg port for reactivelitepp
 ├── include/smartthings4cpp/    # Public headers
 │   ├── smartthings4cpp.h       # Umbrella header
-│   ├── client.h                # Cloud client: auth + discovery + status/commands
+│   ├── client.h                # Cloud client: auth + discovery + status/commands + polling/events
 │   ├── device.h                # Device (ObservableObject) + components/capabilities
+│   ├── webhook.h               # OAuth event subscriptions + webhook lifecycle types
+│   ├── http_server.h           # IHttpServer + embedded default (OAuth redirect + webhook)
+│   ├── storage.h               # IStorageProvider + file/Credential-Manager defaults
 │   ├── component.h             # Component: owns its capabilities
 │   ├── capability.h            # Capability base class + factory
 │   ├── capabilities.h          # Umbrella for all typed capabilities
@@ -341,7 +421,7 @@ smartthings4cpp/
 │   └── oauth2/                 # OAuth2Config, OAuth2Token, OAuth2Authenticator
 ├── src/                        # Implementation (incl. src/capabilities/, src/oauth2/)
 ├── examples/                   # device_listing, authentication, oauth2_authentication,
-│                               #   device_control, full_discovery, live_updates
+│                               #   device_control, full_discovery, live_updates, event_updates
 ├── tools/                      # Generator for the proprietary capabilities
 └── tests/                      # Catch2 unit tests (offline)
 ```

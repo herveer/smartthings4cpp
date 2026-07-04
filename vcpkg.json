@@ -6,6 +6,7 @@
   "license": "MIT",
   "dependencies": [
     "cpr",
+    "cpp-httplib",
     "nlohmann-json",
     "catch2",
     "reactivelitepp"

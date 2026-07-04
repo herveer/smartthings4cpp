@@ -22,6 +22,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Find required packages
 find_package(cpr CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+# Embedded webhook/OAuth-redirect server (header-only; used only in src/http_server.cpp)
+find_package(httplib CONFIG REQUIRED)
 
 # Client's background polling thread uses <thread>/<condition_variable>.
 # CMake's threading module supplies -lpthread on Linux/macOS; a no-op on MSVC.

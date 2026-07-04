@@ -94,6 +94,22 @@ namespace smartthings4cpp {
 		 */
 		void updateStatus(const nlohmann::json& capStatus);
 
+		/**
+		 * @brief Apply a single attribute change delivered by a webhook event
+		 *
+		 * Merges just @p attr's new @p value into the cached status (leaving the
+		 * capability's other attributes untouched) and re-parses, so typed
+		 * getters and PropertyChanged reflect it immediately - the same reactive
+		 * path a status refresh or an optimistic command update takes.
+		 * @param attr Attribute name from the SmartThings deviceEvent (e.g. "switch")
+		 * @param value The new attribute value
+		 * @note Used by Device::applyDeviceEvent(); it is exactly setLocalAttribute()
+		 *       exposed for event dispatch, hence public-but-internal like updateStatus().
+		 */
+		void applyAttributeEvent(const std::string& attr, const nlohmann::json& value) {
+			setLocalAttribute(attr, value);
+		}
+
 		/** @brief Raw cached status object for this capability */
 		const nlohmann::json& statusJson() const { return _status; }
 

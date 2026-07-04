@@ -2,6 +2,7 @@
 #include "smartthings4cpp/device.h"
 #include "smartthings4cpp/http_client.h"
 #include "smartthings4cpp/json_utils.h"
+#include "smartthings4cpp/oauth2/oauth2_authenticator.h"
 
 #include <nlohmann/json.hpp>
 #include <algorithm>
@@ -45,7 +46,27 @@ namespace smartthings4cpp {
 		}
 	}
 
+	/**
+	 * Bridges shared_ptr<Device> custom deleters back to their Client. Each
+	 * deleter only holds a weak_ptr to this hub: once ~Client() has disarmed it
+	 * (client = nullptr) - or the hub itself is gone - a Device destroyed after
+	 * its Client is a silent no-op instead of a call into freed memory.
+	 */
+	struct Client::DeviceLifetimeHub {
+		std::mutex mutex;
+		Client* client = nullptr; // guarded by mutex
+
+		void notifyReleased(const std::string& deviceId) {
+			std::lock_guard<std::mutex> lock(mutex);
+			if (client) {
+				client->onDeviceReleased(deviceId);
+			}
+		}
+	};
+
 	Client::Client(PollingMode pollingMode) {
+		_lifetimeHub = std::make_shared<DeviceLifetimeHub>();
+		_lifetimeHub->client = this;
 		if (pollingMode == PollingMode::Automatic) {
 			startPolling();
 		}
@@ -53,13 +74,120 @@ namespace smartthings4cpp {
 
 	Client::Client(const std::string& access_token, PollingMode pollingMode)
 		: _access_token(access_token) {
+		_lifetimeHub = std::make_shared<DeviceLifetimeHub>();
+		_lifetimeHub->client = this;
 		if (pollingMode == PollingMode::Automatic) {
 			startPolling();
 		}
 	}
 
+	Client::Client(oauth2::OAuth2Config config, int port, std::string oauthCallbackRoute,
+		std::string webhookCallbackRoute, std::string externalUri, std::filesystem::path workingDir)
+		: Client(std::move(config),
+			makeDefaultHttpServer(port, std::move(oauthCallbackRoute), std::move(webhookCallbackRoute), std::move(externalUri)),
+			makeDefaultKeychainProvider(workingDir),
+			makeDefaultStorageProvider(workingDir)) {
+	}
+
+	Client::Client(oauth2::OAuth2Config config, std::unique_ptr<IHttpServer> httpServer,
+		std::unique_ptr<IStorageProvider> keychainProvider,
+		std::unique_ptr<IStorageProvider> storageProvider)
+		: _isOAuth(true),
+		_oauthConfig(std::move(config)),
+		_authenticator(std::make_unique<oauth2::OAuth2Authenticator>(_oauthConfig)),
+		_httpServer(std::move(httpServer)),
+		_keychain(std::move(keychainProvider)),
+		_storage(std::move(storageProvider)) {
+		_lifetimeHub = std::make_shared<DeviceLifetimeHub>();
+		_lifetimeHub->client = this;
+
+		// Rehydrate persisted state so a second run authenticates silently.
+		if (_storage) {
+			if (auto appId = _storage->getValue("installedAppId")) {
+				std::lock_guard<std::mutex> lock(_installMutex);
+				_installedAppId = *appId;
+			}
+		}
+		if (auto stored = loadPersistedOAuthToken()) {
+			if (!stored->accessToken.empty()) {
+				_access_token = stored->accessToken; // no other threads yet
+			}
+			if (!stored->installedAppId.empty()) {
+				std::lock_guard<std::mutex> lock(_installMutex);
+				_installedAppId = stored->installedAppId;
+			}
+		}
+
+		// Transparent 401 recovery through the existing getWithAuth/postWithAuth
+		// retry chokepoints. Deliberately minimal - refresh, persist, return -
+		// because it runs while getWithAuth() already holds _authMutex (which
+		// also assigns the returned token itself).
+		_token_refresh_callback = [this]() -> Result<std::string> {
+			auto stored = loadPersistedOAuthToken();
+			if (!stored || stored->refreshToken.empty()) {
+				return Result<std::string>(ErrorCode::AuthenticationRequired,
+					"No stored refresh token to recover with");
+			}
+			auto refreshed = _authenticator->refresh(stored->refreshToken);
+			if (!refreshed.isSuccess() || !refreshed.hasValue()) {
+				return Result<std::string>(refreshed.error, refreshed.error_message);
+			}
+			persistOAuthToken(*refreshed.value);
+			return Result<std::string>(refreshed.value->accessToken);
+			};
+
+		if (_httpServer) {
+			_httpServer->bind(
+				[this](std::string args) { onOAuthRedirect(std::move(args)); },
+				[this](nlohmann::json body) -> nlohmann::json {
+					auto response = handleWebhook(body.dump());
+					try {
+						return json_utils::parse(response.body);
+					}
+					catch (const std::exception&) {
+						return nlohmann::json::object();
+					}
+				});
+			_serverStart = _httpServer->start();
+		}
+		else {
+			_serverStart = Result<void>(ErrorCode::InvalidParameter,
+				"No IHttpServer provided to the OAuth Client");
+		}
+		// No background polling in OAuth mode: webhook events drive updates.
+	}
+
 	Client::~Client() {
+		// Stop inbound callbacks first: the server thread calls back into this
+		// Client (handleWebhook/onOAuthRedirect), so it must be quiet before
+		// anything else is torn down.
+		if (_httpServer) {
+			_httpServer->stop();
+		}
 		stopPolling();
+
+		// Disarm the deleter hub: a Device destroyed after this point no-ops.
+		if (_lifetimeHub) {
+			std::lock_guard<std::mutex> lock(_lifetimeHub->mutex);
+			_lifetimeHub->client = nullptr;
+		}
+
+		// Best effort: tear down automatic subscriptions still registered. In a
+		// clean shutdown the Devices died first and already removed theirs, so
+		// this is normally empty (crash leftovers are adopted by the next run).
+		if (_isOAuth) {
+			std::unordered_map<std::string, std::string> remaining;
+			{
+				std::lock_guard<std::mutex> lock(_subscriptionMutex);
+				remaining.swap(_subscribedDevices);
+			}
+			for (auto& [deviceId, subscriptionId] : remaining) {
+				(void)deviceId;
+				if (!subscriptionId.empty()) {
+					deleteSubscription(subscriptionId);
+				}
+			}
+		}
 	}
 
 	void Client::setAccessToken(const std::string& token) {
@@ -241,7 +369,7 @@ namespace smartthings4cpp {
 			if (id.empty()) {
 				continue;
 			}
-			auto device = std::make_shared<Device>(id, this);
+			auto device = makeTrackedDevice(id);
 			device->initFromJson(item);
 			registerDevice(device);
 			devices.push_back(std::move(device));
@@ -264,7 +392,7 @@ namespace smartthings4cpp {
 			auto json_response = json_utils::parse(response.body);
 			std::string id = json_utils::getValueOr<std::string>(json_response, "deviceId", device_id);
 
-			auto device = std::make_shared<Device>(id, this);
+			auto device = makeTrackedDevice(id);
 			device->initFromJson(json_response);
 			registerDevice(device);
 			return device;
@@ -400,19 +528,76 @@ namespace smartthings4cpp {
 			return;
 		}
 
-		std::lock_guard<std::mutex> lock(_registryMutex);
-		auto& bucket = _deviceRegistry[device->Id.Get()];
+		{
+			std::lock_guard<std::mutex> lock(_registryMutex);
+			auto& bucket = _deviceRegistry[device->Id.Get()];
 
-		// Opportunistic prune: drop expired entries for this id while the lock
-		// is already held, so a Manual-mode Client that never calls pollNow()
-		// (and so never hits snapshotRegistry()'s full prune) doesn't grow this
-		// bucket unboundedly across repeated getDevice() calls for the same id.
-		bucket.erase(
-			std::remove_if(bucket.begin(), bucket.end(),
-				[](const std::weak_ptr<Device>& w) { return w.expired(); }),
-			bucket.end());
+			// Opportunistic prune: drop expired entries for this id while the lock
+			// is already held, so a Manual-mode Client that never calls pollNow()
+			// (and so never hits snapshotRegistry()'s full prune) doesn't grow this
+			// bucket unboundedly across repeated getDevice() calls for the same id.
+			bucket.erase(
+				std::remove_if(bucket.begin(), bucket.end(),
+					[](const std::weak_ptr<Device>& w) { return w.expired(); }),
+				bucket.end());
 
-		bucket.push_back(device);
+			bucket.push_back(device);
+		}
+
+		// Outside the registry lock - may perform a network call in OAuth mode.
+		maybeSubscribeDevice(device->Id.Get());
+	}
+
+	std::shared_ptr<Device> Client::makeTrackedDevice(const std::string& id) {
+		std::weak_ptr<DeviceLifetimeHub> weakHub = _lifetimeHub;
+		return std::shared_ptr<Device>(new Device(id, this),
+			[weakHub, id](Device* device) {
+				delete device;
+				if (auto hub = weakHub.lock()) {
+					hub->notifyReleased(id);
+				}
+			});
+	}
+
+	void Client::onDeviceReleased(const std::string& deviceId) {
+		bool lastGone = false;
+		{
+			std::lock_guard<std::mutex> lock(_registryMutex);
+			auto it = _deviceRegistry.find(deviceId);
+			if (it == _deviceRegistry.end()) {
+				// Already swept (e.g. by snapshotRegistry): nothing lives.
+				lastGone = true;
+			}
+			else {
+				auto& bucket = it->second;
+				bucket.erase(
+					std::remove_if(bucket.begin(), bucket.end(),
+						[](const std::weak_ptr<Device>& w) { return w.expired(); }),
+					bucket.end());
+				if (bucket.empty()) {
+					_deviceRegistry.erase(it);
+					lastGone = true;
+				}
+			}
+		}
+		if (!lastGone || !_isOAuth) {
+			return;
+		}
+
+		// Last Device for this id is gone: its automatic subscription goes too.
+		std::string subscriptionId;
+		{
+			std::lock_guard<std::mutex> lock(_subscriptionMutex);
+			_pendingSubscriptions.erase(deviceId);
+			auto it = _subscribedDevices.find(deviceId);
+			if (it != _subscribedDevices.end()) {
+				subscriptionId = it->second;
+				_subscribedDevices.erase(it);
+			}
+		}
+		if (!subscriptionId.empty()) {
+			deleteSubscription(subscriptionId);
+		}
 	}
 
 	std::vector<std::pair<std::string, std::vector<std::shared_ptr<Device>>>> Client::snapshotRegistry() {
@@ -475,7 +660,7 @@ namespace smartthings4cpp {
 				lock.lock();
 				_pollingCv.wait_for(lock, interval, [this]() { return !_pollingRunning.load(); });
 			}
-		});
+			});
 	}
 
 	void Client::stopPolling() {
@@ -506,6 +691,186 @@ namespace smartthings4cpp {
 	std::chrono::milliseconds Client::getPollingInterval() const {
 		std::lock_guard<std::mutex> lock(_pollingMutex);
 		return _pollingInterval;
+	}
+
+	// --- OAuth authentication flow ------------------------------------------
+
+	Result<bool> Client::authenticate() {
+		if (!_isOAuth) {
+			return Result<bool>(ErrorCode::InvalidRequest,
+				"authenticate() requires an OAuth-mode Client (see the OAuth constructors)");
+		}
+		if (!_serverStart.isSuccess()) {
+			return Result<bool>(_serverStart.error, _serverStart.error_message);
+		}
+
+		if (auto stored = loadPersistedOAuthToken()) {
+			// 1. Still-valid access token: nothing to do.
+			if (!stored->accessToken.empty() && !stored->isExpired()) {
+				{
+					std::lock_guard<std::mutex> lock(_authMutex);
+					_access_token = stored->accessToken;
+				}
+				const auto validateAuthenticationResult = validateAuthentication();
+
+				if (validateAuthenticationResult.isSuccess()) {
+					adoptInstalledAppId(stored->installedAppId);
+					flushPendingSubscriptions();
+					completeAuthentication(Result<void>());
+					return Result<bool>(true);
+				}
+				_access_token = "";
+
+				if (validateAuthenticationResult.error == ErrorCode::AuthenticationFailed) {
+					stored = oauth2::OAuth2Token();
+					applyOAuthToken(*stored);
+				}
+				else {
+					Result<bool> res(validateAuthenticationResult.error, validateAuthenticationResult.error_message);
+					res.value = false;
+					return res;
+				}
+			}
+			// 2. Refresh token: silent renewal (rotates + persists the pair).
+			if (!stored->refreshToken.empty()) {
+				auto refreshed = _authenticator->refresh(stored->refreshToken);
+				if (refreshed.isSuccess() && refreshed.hasValue()) {
+					applyOAuthToken(*refreshed.value);
+					completeAuthentication(Result<void>());
+					return Result<bool>(true);
+				}
+				if (refreshed.error == ErrorCode::NetworkError
+					|| refreshed.error == ErrorCode::RateLimited) {
+					// A new consent can't fix an unreachable token endpoint.
+					return Result<bool>(refreshed.error, refreshed.error_message);
+				}
+				// Refresh token rejected (expired/revoked): fall through to consent.
+			}
+		}
+
+		// 3. Interactive consent - the one step the library can't do itself.
+		{
+			std::lock_guard<std::mutex> lock(_authWaitMutex);
+			_authFinished = false;
+		}
+		std::string url = _authenticator->buildAuthorizeUrl(_httpServer->fullOAuthCallbackUri());
+		openBrowserRequested.Notify(url);
+		return Result<bool>(false);
+	}
+
+	Result<void> Client::waitForAuthentication(std::chrono::milliseconds timeout) {
+		if (!_isOAuth) {
+			return Result<void>(ErrorCode::InvalidRequest,
+				"waitForAuthentication() requires an OAuth-mode Client");
+		}
+		std::unique_lock<std::mutex> lock(_authWaitMutex);
+		if (!_authWaitCv.wait_for(lock, timeout, [this]() { return _authFinished; })) {
+			return Result<void>(ErrorCode::TimeoutError,
+				"Authentication did not complete within the allotted time");
+		}
+		return _authOutcome;
+	}
+
+	void Client::onOAuthRedirect(std::string args) {
+		auto exchanged = _authenticator->completeAuthorization(args);
+		if (exchanged.isSuccess() && exchanged.hasValue()) {
+			applyOAuthToken(*exchanged.value);
+			completeAuthentication(Result<void>());
+		}
+		else {
+			completeAuthentication(Result<void>(exchanged.error, exchanged.error_message));
+		}
+	}
+
+	void Client::applyOAuthToken(const oauth2::OAuth2Token& token) {
+		persistOAuthToken(token);
+		{
+			std::lock_guard<std::mutex> lock(_authMutex);
+			_access_token = token.accessToken;
+		}
+		adoptInstalledAppId(token.installedAppId);
+		flushPendingSubscriptions();
+	}
+
+	void Client::persistOAuthToken(const oauth2::OAuth2Token& token) const {
+		if (!_keychain) {
+			return;
+		}
+		oauth2::OAuth2Token merged = token;
+		// A refresh response may omit fields the original grant carried; keep
+		// the previous values rather than losing them.
+		if (merged.refreshToken.empty() || merged.installedAppId.empty()) {
+			if (auto previous = loadPersistedOAuthToken()) {
+				if (merged.refreshToken.empty()) {
+					merged.refreshToken = previous->refreshToken;
+				}
+				if (merged.installedAppId.empty()) {
+					merged.installedAppId = previous->installedAppId;
+				}
+			}
+		}
+		nlohmann::json blob = {
+			{ "accessToken", merged.accessToken },
+			{ "refreshToken", merged.refreshToken },
+			{ "installedAppId", merged.installedAppId },
+			{ "scope", merged.scope },
+			{ "issuedAtEpochSeconds", std::chrono::duration_cast<std::chrono::seconds>(
+				merged.issuedAt.time_since_epoch()).count() },
+			{ "expiresInSeconds", merged.expiresIn.count() }
+		};
+		_keychain->setValue("oauth.token", blob.dump());
+	}
+
+	std::optional<oauth2::OAuth2Token> Client::loadPersistedOAuthToken() const {
+		if (!_keychain) {
+			return std::nullopt;
+		}
+		auto raw = _keychain->getValue("oauth.token");
+		if (!raw) {
+			return std::nullopt;
+		}
+		try {
+			auto blob = json_utils::parse(*raw);
+			oauth2::OAuth2Token token;
+			token.accessToken = json_utils::getValueOr<std::string>(blob, "accessToken", "");
+			token.refreshToken = json_utils::getValueOr<std::string>(blob, "refreshToken", "");
+			token.installedAppId = json_utils::getValueOr<std::string>(blob, "installedAppId", "");
+			token.scope = json_utils::getValueOr<std::string>(blob, "scope", "");
+			token.issuedAt = std::chrono::system_clock::time_point{}
+			+ std::chrono::seconds(json_utils::getValueOr<long long>(blob, "issuedAtEpochSeconds", 0));
+			token.expiresIn = std::chrono::seconds(
+				json_utils::getValueOr<long long>(blob, "expiresInSeconds", 0));
+			if (token.accessToken.empty() && token.refreshToken.empty()) {
+				return std::nullopt;
+			}
+			return token;
+		}
+		catch (const std::exception&) {
+			return std::nullopt;
+		}
+	}
+
+	void Client::adoptInstalledAppId(const std::string& installedAppId) {
+		if (installedAppId.empty()) {
+			return;
+		}
+		{
+			std::lock_guard<std::mutex> lock(_installMutex);
+			_installedAppId = installedAppId;
+		}
+		if (_storage) {
+			_storage->setValue("installedAppId", installedAppId);
+		}
+	}
+
+	void Client::completeAuthentication(const Result<void>& outcome) {
+		{
+			std::lock_guard<std::mutex> lock(_authWaitMutex);
+			_authOutcome = outcome;
+			_authFinished = true;
+		}
+		_authWaitCv.notify_all();
+		authenticationCompleted.Notify(outcome);
 	}
 
 } // namespace smartthings4cpp

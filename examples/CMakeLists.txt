@@ -47,3 +47,11 @@ set_target_properties(live_updates PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
+
+# Event updates example (OAuth webhook subscriptions + PropertyChanged, no polling)
+add_executable(event_updates event_updates.cpp)
+target_link_libraries(event_updates PRIVATE smartthings4cpp)
+set_target_properties(event_updates PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)

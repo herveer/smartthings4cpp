@@ -86,6 +86,22 @@ namespace smartthings4cpp {
 		return Result<void>();
 	}
 
+	bool Device::applyDeviceEvent(const std::string& componentId, const std::string& capability,
+		const std::string& attribute, const nlohmann::json& value) const {
+		// Walk the already-built components directly - do NOT call ensureRefreshed():
+		// an inbound push event must never trigger an outbound status fetch.
+		for (auto& component : _components) {
+			if (component.id != componentId) {
+				continue;
+			}
+			if (Capability* cap = component.get(capability)) {
+				cap->applyAttributeEvent(attribute, value);
+				return true;
+			}
+		}
+		return false;
+	}
+
 	void Device::ensureRefreshed() const {
 		if (!_hasBeenRefreshed) {
 			refreshStatus();
