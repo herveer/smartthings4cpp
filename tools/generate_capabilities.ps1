@@ -153,7 +153,7 @@ foreach ($file in (Get-ChildItem $SchemaDir -Filter *.json | Sort-Object Name)) 
             default    { $cpp = 'nlohmann::json'; $fieldDecls += "$cpp $fld;";
                          $parseLines += "`t`t{ auto v = attributeValue(`"$an`"); if (!v.is_null()) SetPropertyValueAndNotify<&$class`::$prop>($fld, v); }" }
         }
-        $propDecls += "`t`tReactiveLitepp::ReadonlyProperty<$cpp> $prop{ [this]() { return $fld; } };"
+        $propDecls += "`t`tReactiveLitepp::ReadonlyProperty<$cpp> $prop = MakeReadonlyProperty<&$class`::$prop>([this]() { return $fld; });"
     }
 
     $cmdDecls = @(); $cmdDefs = @(); $cmdNames = @()

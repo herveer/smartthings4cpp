@@ -127,6 +127,8 @@ int main() {
 		std::cout << "  - " << device->Label.Get() << " (" << device->Id.Get() << ")\n";
 		subscriptions.push_back(device->PropertyChanged.SubscribeScoped(
 			[](ObservableObject& obj, PropertyChangedArgs args) {
+				static std::mutex mutex;
+				const auto lock = std::scoped_lock(mutex);
 				auto& capability = static_cast<Capability&>(obj);
 				std::string label = "?";
 				if (auto* component = capability.component()) {
@@ -134,8 +136,32 @@ int main() {
 						label = owner->Label.Get();
 					}
 				}
+
+				std::any newValue = obj.GetProperty(args.PropertyName());
+
+				// Convert any to a string for display, if possible
+				std::string newValueStr = "?";
+				if (newValue.has_value()) {
+					if(newValue.type() == typeid(std::string)) {
+						newValueStr = std::any_cast<std::string>(newValue);
+					}
+					else if(newValue.type() == typeid(int)) {
+						newValueStr = std::to_string(std::any_cast<int>(newValue));
+					}
+					else if(newValue.type() == typeid(double)) {
+						newValueStr = std::to_string(std::any_cast<double>(newValue));
+					}
+					else if(newValue.type() == typeid(bool)) {
+						newValueStr = std::any_cast<bool>(newValue) ? "true" : "false";
+					}
+					else {
+						newValueStr = "<unprintable type: " + std::string(newValue.type().name()) + ">";
+					}
+				}
+
+
 				std::cout << "  [push] " << label << " / " << capability.component()->id << " / " << capability.capabilityId()
-					<< ": " << args.PropertyName() << " changed\n";
+					<< ": " << args.PropertyName() << " changed, new value = " << newValueStr << std::endl;
 			}));
 	}
 

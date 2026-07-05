@@ -12,7 +12,7 @@ namespace samsungce {
 
 		DriverVersion(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<double> VersionNumber{ [this]() { return _versionNumber; } };
+		ReactiveLitepp::ReadonlyProperty<double> VersionNumber = MakeReadonlyProperty<&DriverVersion::VersionNumber>([this]() { return _versionNumber; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

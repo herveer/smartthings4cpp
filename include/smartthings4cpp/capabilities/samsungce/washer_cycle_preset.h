@@ -12,8 +12,8 @@ namespace samsungce {
 
 		WasherCyclePreset(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<double> MaxNumberOfPresets{ [this]() { return _maxNumberOfPresets; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Presets{ [this]() { return _presets; } };
+		ReactiveLitepp::ReadonlyProperty<double> MaxNumberOfPresets = MakeReadonlyProperty<&WasherCyclePreset::MaxNumberOfPresets>([this]() { return _maxNumberOfPresets; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Presets = MakeReadonlyProperty<&WasherCyclePreset::Presets>([this]() { return _presets; });
 
 		Result<void> setWasherCyclePreset(const nlohmann::json& presets);
 		Result<void> delete_(const nlohmann::json& presetIds);

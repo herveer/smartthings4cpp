@@ -12,15 +12,15 @@ namespace sec {
 
 		DiagnosticsInformation(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> LogType{ [this]() { return _logType; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Endpoint{ [this]() { return _endpoint; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> MinVersion{ [this]() { return _minVersion; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> SigninPermission{ [this]() { return _signinPermission; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> SetupId{ [this]() { return _setupId; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> ProtocolType{ [this]() { return _protocolType; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> TsId{ [this]() { return _tsId; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> MnId{ [this]() { return _mnId; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> DumpType{ [this]() { return _dumpType; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> LogType = MakeReadonlyProperty<&DiagnosticsInformation::LogType>([this]() { return _logType; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Endpoint = MakeReadonlyProperty<&DiagnosticsInformation::Endpoint>([this]() { return _endpoint; });
+		ReactiveLitepp::ReadonlyProperty<std::string> MinVersion = MakeReadonlyProperty<&DiagnosticsInformation::MinVersion>([this]() { return _minVersion; });
+		ReactiveLitepp::ReadonlyProperty<std::string> SigninPermission = MakeReadonlyProperty<&DiagnosticsInformation::SigninPermission>([this]() { return _signinPermission; });
+		ReactiveLitepp::ReadonlyProperty<std::string> SetupId = MakeReadonlyProperty<&DiagnosticsInformation::SetupId>([this]() { return _setupId; });
+		ReactiveLitepp::ReadonlyProperty<std::string> ProtocolType = MakeReadonlyProperty<&DiagnosticsInformation::ProtocolType>([this]() { return _protocolType; });
+		ReactiveLitepp::ReadonlyProperty<std::string> TsId = MakeReadonlyProperty<&DiagnosticsInformation::TsId>([this]() { return _tsId; });
+		ReactiveLitepp::ReadonlyProperty<std::string> MnId = MakeReadonlyProperty<&DiagnosticsInformation::MnId>([this]() { return _mnId; });
+		ReactiveLitepp::ReadonlyProperty<std::string> DumpType = MakeReadonlyProperty<&DiagnosticsInformation::DumpType>([this]() { return _dumpType; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

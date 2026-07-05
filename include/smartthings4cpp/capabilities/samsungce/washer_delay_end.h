@@ -12,8 +12,8 @@ namespace samsungce {
 
 		WasherDelayEnd(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> RemainingTime{ [this]() { return _remainingTime; } };
-		ReactiveLitepp::ReadonlyProperty<int> MinimumReservableTime{ [this]() { return _minimumReservableTime; } };
+		ReactiveLitepp::ReadonlyProperty<int> RemainingTime = MakeReadonlyProperty<&WasherDelayEnd::RemainingTime>([this]() { return _remainingTime; });
+		ReactiveLitepp::ReadonlyProperty<int> MinimumReservableTime = MakeReadonlyProperty<&WasherDelayEnd::MinimumReservableTime>([this]() { return _minimumReservableTime; });
 
 		Result<void> refreshMinimumReservableTime();
 		Result<void> setDelayTime(int delayTime);

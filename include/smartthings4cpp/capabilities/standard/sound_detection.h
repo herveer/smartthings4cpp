@@ -12,9 +12,9 @@ namespace standard {
 
 		SoundDetection(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> SoundDetectionState{ [this]() { return _soundDetectionState; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedSoundTypes{ [this]() { return _supportedSoundTypes; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> SoundDetected{ [this]() { return _soundDetected; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> SoundDetectionState = MakeReadonlyProperty<&SoundDetection::SoundDetectionState>([this]() { return _soundDetectionState; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedSoundTypes = MakeReadonlyProperty<&SoundDetection::SupportedSoundTypes>([this]() { return _supportedSoundTypes; });
+		ReactiveLitepp::ReadonlyProperty<std::string> SoundDetected = MakeReadonlyProperty<&SoundDetection::SoundDetected>([this]() { return _soundDetected; });
 
 		Result<void> disableSoundDetection();
 		Result<void> enableSoundDetection();

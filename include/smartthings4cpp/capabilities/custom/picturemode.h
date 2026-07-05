@@ -12,9 +12,9 @@ namespace custom {
 
 		Picturemode(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> PictureModeValue{ [this]() { return _pictureModeValue; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedPictureModes{ [this]() { return _supportedPictureModes; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedPictureModesMap{ [this]() { return _supportedPictureModesMap; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> PictureModeValue = MakeReadonlyProperty<&Picturemode::PictureModeValue>([this]() { return _pictureModeValue; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedPictureModes = MakeReadonlyProperty<&Picturemode::SupportedPictureModes>([this]() { return _supportedPictureModes; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedPictureModesMap = MakeReadonlyProperty<&Picturemode::SupportedPictureModesMap>([this]() { return _supportedPictureModesMap; });
 
 		Result<void> setPictureMode(const std::string& mode);
 		std::vector<std::string> commandNames() const override { return { "setPictureMode" }; }

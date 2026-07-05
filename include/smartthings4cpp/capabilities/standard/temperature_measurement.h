@@ -12,8 +12,8 @@ namespace standard {
 
 		TemperatureMeasurement(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> TemperatureRange{ [this]() { return _temperatureRange; } };
-		ReactiveLitepp::ReadonlyProperty<double> Temperature{ [this]() { return _temperature; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> TemperatureRange = MakeReadonlyProperty<&TemperatureMeasurement::TemperatureRange>([this]() { return _temperatureRange; });
+		ReactiveLitepp::ReadonlyProperty<double> Temperature = MakeReadonlyProperty<&TemperatureMeasurement::Temperature>([this]() { return _temperature; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

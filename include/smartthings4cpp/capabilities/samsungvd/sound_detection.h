@@ -12,7 +12,7 @@ namespace samsungvd {
 
 		SoundDetection(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> SoundDetected{ [this]() { return _soundDetected; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> SoundDetected = MakeReadonlyProperty<&SoundDetection::SoundDetected>([this]() { return _soundDetected; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

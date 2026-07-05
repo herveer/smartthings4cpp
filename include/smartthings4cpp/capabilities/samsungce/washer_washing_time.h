@@ -12,8 +12,8 @@ namespace samsungce {
 
 		WasherWashingTime(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWashingTimes{ [this]() { return _supportedWashingTimes; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> WashingTime{ [this]() { return _washingTime; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWashingTimes = MakeReadonlyProperty<&WasherWashingTime::SupportedWashingTimes>([this]() { return _supportedWashingTimes; });
+		ReactiveLitepp::ReadonlyProperty<std::string> WashingTime = MakeReadonlyProperty<&WasherWashingTime::WashingTime>([this]() { return _washingTime; });
 
 		Result<void> setWashingTime(const std::string& washingTime);
 		std::vector<std::string> commandNames() const override { return { "setWashingTime" }; }

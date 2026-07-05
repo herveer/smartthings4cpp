@@ -12,7 +12,7 @@ namespace samsungce {
 
 		FridgeZoneInfo(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Name{ [this]() { return _name; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Name = MakeReadonlyProperty<&FridgeZoneInfo::Name>([this]() { return _name; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

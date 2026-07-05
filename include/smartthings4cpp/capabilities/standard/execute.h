@@ -12,7 +12,7 @@ namespace standard {
 
 		Execute(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Data{ [this]() { return _data; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Data = MakeReadonlyProperty<&Execute::Data>([this]() { return _data; });
 
 		Result<void> execute(const std::string& command, const nlohmann::json& args);
 		std::vector<std::string> commandNames() const override { return { "execute" }; }

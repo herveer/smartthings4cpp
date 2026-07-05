@@ -12,7 +12,7 @@ namespace standard {
 
 		PresenceSensor(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Presence{ [this]() { return _presence; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Presence = MakeReadonlyProperty<&PresenceSensor::Presence>([this]() { return _presence; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

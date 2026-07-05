@@ -12,8 +12,8 @@ namespace samsungce {
 
 		WasherWaterValve(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> WaterValve{ [this]() { return _waterValve; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWaterValve{ [this]() { return _supportedWaterValve; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> WaterValve = MakeReadonlyProperty<&WasherWaterValve::WaterValve>([this]() { return _waterValve; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWaterValve = MakeReadonlyProperty<&WasherWaterValve::SupportedWaterValve>([this]() { return _supportedWaterValve; });
 
 		Result<void> setWaterValve(const std::string& waterValve);
 		std::vector<std::string> commandNames() const override { return { "setWaterValve" }; }

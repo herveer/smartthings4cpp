@@ -12,7 +12,7 @@ namespace standard {
 
 		MediaPresets(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Presets{ [this]() { return _presets; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Presets = MakeReadonlyProperty<&MediaPresets::Presets>([this]() { return _presets; });
 
 		Result<void> playPreset(const std::string& presetId);
 		std::vector<std::string> commandNames() const override { return { "playPreset" }; }

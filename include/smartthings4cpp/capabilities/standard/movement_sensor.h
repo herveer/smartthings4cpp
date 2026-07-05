@@ -12,8 +12,8 @@ namespace standard {
 
 		MovementSensor(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedMovements{ [this]() { return _supportedMovements; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Movement{ [this]() { return _movement; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedMovements = MakeReadonlyProperty<&MovementSensor::SupportedMovements>([this]() { return _supportedMovements; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Movement = MakeReadonlyProperty<&MovementSensor::Movement>([this]() { return _movement; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

@@ -9,6 +9,8 @@
 #include "smartthings4cpp/json_utils.h"
 #include "smartthings4cpp/oauth2/oauth2_types.h"
 
+#include "loopback_http.h"
+
 #include <map>
 #include <memory>
 #include <mutex>
@@ -86,7 +88,12 @@ namespace {
 } // namespace
 
 TEST_CASE("DefaultHttpServer serves the OAuth and webhook routes (loopback)", "[httpserver]") {
-	auto server = makeDefaultHttpServer(0, "/oauth/callback", "/webhook");
+	// fullOAuthCallbackUri() now echoes the externalUri verbatim rather than the
+	// bound listen address, so to reach the server the test binds a known free
+	// port and makes the externalUri point back at it.
+	auto port = testutil::freeLoopbackPort();
+	auto server = makeDefaultHttpServer(port, "/oauth/callback", "/webhook",
+		"http://localhost:" + std::to_string(port));
 
 	std::string oauthArgs;
 	nlohmann::json webhookBody;
@@ -99,7 +106,7 @@ TEST_CASE("DefaultHttpServer serves the OAuth and webhook routes (loopback)", "[
 
 	REQUIRE(server->start().isSuccess());
 	auto oauthUri = server->fullOAuthCallbackUri();
-	REQUIRE(oauthUri.rfind("http://localhost:", 0) == 0);
+	REQUIRE(oauthUri.rfind("http://localhost", 0) == 0);
 	auto base = baseUrlOf(oauthUri, "/oauth/callback");
 
 	HttpClient http;
@@ -130,7 +137,7 @@ TEST_CASE("DefaultHttpServer serves the OAuth and webhook routes (loopback)", "[
 }
 
 TEST_CASE("DefaultHttpServer start() is idempotent and stop() is prompt", "[httpserver]") {
-	auto server = makeDefaultHttpServer(0, "/oauth/callback", "/webhook");
+	auto server = makeDefaultHttpServer(0, "/oauth/callback", "/webhook", "http://localhost");
 	server->bind([](std::string) {}, [](nlohmann::json) { return nlohmann::json::object(); });
 
 	REQUIRE(server->start().isSuccess());
@@ -144,7 +151,9 @@ TEST_CASE("A webhook EVENT POSTed to the embedded server updates live Devices", 
 	// Client::handleWebhook -> device registry fan-out -> Capability update ->
 	// PropertyChanged relay. This is what a SmartThings event delivery does,
 	// minus the internet.
-	auto server = makeDefaultHttpServer(0, "/oauth/callback", "/webhook");
+	auto port = testutil::freeLoopbackPort();
+	auto server = makeDefaultHttpServer(port, "/oauth/callback", "/webhook",
+		"http://localhost:" + std::to_string(port));
 	auto* serverRaw = server.get();
 
 	oauth2::OAuth2Config config;

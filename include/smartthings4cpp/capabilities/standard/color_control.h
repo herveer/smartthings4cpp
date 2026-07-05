@@ -12,9 +12,9 @@ namespace standard {
 
 		ColorControl(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<double> Saturation{ [this]() { return _saturation; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Color{ [this]() { return _color; } };
-		ReactiveLitepp::ReadonlyProperty<double> Hue{ [this]() { return _hue; } };
+		ReactiveLitepp::ReadonlyProperty<double> Saturation = MakeReadonlyProperty<&ColorControl::Saturation>([this]() { return _saturation; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Color = MakeReadonlyProperty<&ColorControl::Color>([this]() { return _color; });
+		ReactiveLitepp::ReadonlyProperty<double> Hue = MakeReadonlyProperty<&ColorControl::Hue>([this]() { return _hue; });
 
 		Result<void> setColor(const nlohmann::json& color);
 		Result<void> setHue(double hue);

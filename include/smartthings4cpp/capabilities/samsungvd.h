@@ -2,8 +2,8 @@
 
 /** @file samsungvd.h @brief All samsungvd.* proprietary capabilities (generated). */
 
-#include "samsungvd/ambient_content.h"
 #include "samsungvd/ambient.h"
+#include "samsungvd/ambient_content.h"
 #include "samsungvd/art.h"
 #include "samsungvd/audio_group_info.h"
 #include "samsungvd/audio_input_source.h"

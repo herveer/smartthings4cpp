@@ -12,9 +12,9 @@ namespace samsungvd {
 
 		AudioGroupInfo(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Role{ [this]() { return _role; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Channel{ [this]() { return _channel; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Status{ [this]() { return _status; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Role = MakeReadonlyProperty<&AudioGroupInfo::Role>([this]() { return _role; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Channel = MakeReadonlyProperty<&AudioGroupInfo::Channel>([this]() { return _channel; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Status = MakeReadonlyProperty<&AudioGroupInfo::Status>([this]() { return _status; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

@@ -12,9 +12,9 @@ namespace custom {
 
 		Soundmode(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedSoundModesMap{ [this]() { return _supportedSoundModesMap; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> SoundModeValue{ [this]() { return _soundModeValue; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedSoundModes{ [this]() { return _supportedSoundModes; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedSoundModesMap = MakeReadonlyProperty<&Soundmode::SupportedSoundModesMap>([this]() { return _supportedSoundModesMap; });
+		ReactiveLitepp::ReadonlyProperty<std::string> SoundModeValue = MakeReadonlyProperty<&Soundmode::SoundModeValue>([this]() { return _soundModeValue; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedSoundModes = MakeReadonlyProperty<&Soundmode::SupportedSoundModes>([this]() { return _supportedSoundModes; });
 
 		Result<void> setSoundMode(const std::string& mode);
 		std::vector<std::string> commandNames() const override { return { "setSoundMode" }; }

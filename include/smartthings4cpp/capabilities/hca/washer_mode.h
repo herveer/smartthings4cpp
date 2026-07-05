@@ -12,8 +12,8 @@ namespace hca {
 
 		WasherMode(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Mode{ [this]() { return _mode; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedModes{ [this]() { return _supportedModes; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Mode = MakeReadonlyProperty<&WasherMode::Mode>([this]() { return _mode; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedModes = MakeReadonlyProperty<&WasherMode::SupportedModes>([this]() { return _supportedModes; });
 
 		Result<void> setMode(const std::string& mode);
 		std::vector<std::string> commandNames() const override { return { "setMode" }; }

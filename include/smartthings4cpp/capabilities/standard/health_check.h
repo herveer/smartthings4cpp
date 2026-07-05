@@ -12,10 +12,10 @@ namespace standard {
 
 		HealthCheck(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> CheckInterval{ [this]() { return _checkInterval; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> HealthStatus{ [this]() { return _healthStatus; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DeviceWatchEnroll{ [this]() { return _deviceWatchEnroll; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> DeviceWatchDeviceStatus{ [this]() { return _deviceWatchDeviceStatus; } };
+		ReactiveLitepp::ReadonlyProperty<int> CheckInterval = MakeReadonlyProperty<&HealthCheck::CheckInterval>([this]() { return _checkInterval; });
+		ReactiveLitepp::ReadonlyProperty<std::string> HealthStatus = MakeReadonlyProperty<&HealthCheck::HealthStatus>([this]() { return _healthStatus; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DeviceWatchEnroll = MakeReadonlyProperty<&HealthCheck::DeviceWatchEnroll>([this]() { return _deviceWatchEnroll; });
+		ReactiveLitepp::ReadonlyProperty<std::string> DeviceWatchDeviceStatus = MakeReadonlyProperty<&HealthCheck::DeviceWatchDeviceStatus>([this]() { return _deviceWatchDeviceStatus; });
 
 		Result<void> ping();
 		std::vector<std::string> commandNames() const override { return { "ping" }; }

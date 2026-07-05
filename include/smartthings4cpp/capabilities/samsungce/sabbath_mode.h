@@ -12,8 +12,8 @@ namespace samsungce {
 
 		SabbathMode(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedActions{ [this]() { return _supportedActions; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Status{ [this]() { return _status; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedActions = MakeReadonlyProperty<&SabbathMode::SupportedActions>([this]() { return _supportedActions; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Status = MakeReadonlyProperty<&SabbathMode::Status>([this]() { return _status; });
 
 		Result<void> off();
 		Result<void> on();

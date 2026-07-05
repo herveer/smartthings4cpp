@@ -12,10 +12,10 @@ namespace standard {
 
 		WasherOperatingState(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> CompletionTime{ [this]() { return _completionTime; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> MachineState{ [this]() { return _machineState; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherJobState{ [this]() { return _washerJobState; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedMachineStates{ [this]() { return _supportedMachineStates; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> CompletionTime = MakeReadonlyProperty<&WasherOperatingState::CompletionTime>([this]() { return _completionTime; });
+		ReactiveLitepp::ReadonlyProperty<std::string> MachineState = MakeReadonlyProperty<&WasherOperatingState::MachineState>([this]() { return _machineState; });
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherJobState = MakeReadonlyProperty<&WasherOperatingState::WasherJobState>([this]() { return _washerJobState; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedMachineStates = MakeReadonlyProperty<&WasherOperatingState::SupportedMachineStates>([this]() { return _supportedMachineStates; });
 
 		Result<void> setMachineState(const std::string& state);
 		std::vector<std::string> commandNames() const override { return { "setMachineState" }; }

@@ -12,7 +12,7 @@ namespace custom {
 
 		JobBeginningStatus(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> JobBeginningStatusValue{ [this]() { return _jobBeginningStatusValue; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> JobBeginningStatusValue = MakeReadonlyProperty<&JobBeginningStatus::JobBeginningStatusValue>([this]() { return _jobBeginningStatusValue; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

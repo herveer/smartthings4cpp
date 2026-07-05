@@ -12,7 +12,7 @@ namespace standard {
 
 		RemoteControlStatus(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> RemoteControlEnabled{ [this]() { return _remoteControlEnabled; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> RemoteControlEnabled = MakeReadonlyProperty<&RemoteControlStatus::RemoteControlEnabled>([this]() { return _remoteControlEnabled; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

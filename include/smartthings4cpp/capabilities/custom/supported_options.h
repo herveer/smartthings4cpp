@@ -12,9 +12,9 @@ namespace custom {
 
 		SupportedOptions(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Course{ [this]() { return _course; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ReferenceTable{ [this]() { return _referenceTable; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedCourses{ [this]() { return _supportedCourses; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Course = MakeReadonlyProperty<&SupportedOptions::Course>([this]() { return _course; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ReferenceTable = MakeReadonlyProperty<&SupportedOptions::ReferenceTable>([this]() { return _referenceTable; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedCourses = MakeReadonlyProperty<&SupportedOptions::SupportedCourses>([this]() { return _supportedCourses; });
 
 		Result<void> setCourse(const std::string& course);
 		std::vector<std::string> commandNames() const override { return { "setCourse" }; }

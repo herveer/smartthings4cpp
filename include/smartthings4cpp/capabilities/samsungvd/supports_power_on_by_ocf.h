@@ -12,7 +12,7 @@ namespace samsungvd {
 
 		SupportsPowerOnByOcf(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> SupportsPowerOnByOcfValue{ [this]() { return _supportsPowerOnByOcfValue; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> SupportsPowerOnByOcfValue = MakeReadonlyProperty<&SupportsPowerOnByOcf::SupportsPowerOnByOcfValue>([this]() { return _supportsPowerOnByOcfValue; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

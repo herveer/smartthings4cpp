@@ -12,8 +12,8 @@ namespace standard {
 
 		SwitchLevel(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> LevelRange{ [this]() { return _levelRange; } };
-		ReactiveLitepp::ReadonlyProperty<int> Level{ [this]() { return _level; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> LevelRange = MakeReadonlyProperty<&SwitchLevel::LevelRange>([this]() { return _levelRange; });
+		ReactiveLitepp::ReadonlyProperty<int> Level = MakeReadonlyProperty<&SwitchLevel::Level>([this]() { return _level; });
 
 		Result<void> setLevel(int level, int rate);
 		std::vector<std::string> commandNames() const override { return { "setLevel" }; }

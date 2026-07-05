@@ -12,7 +12,7 @@ namespace standard {
 
 		RelativeBrightness(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> BrightnessIntensity{ [this]() { return _brightnessIntensity; } };
+		ReactiveLitepp::ReadonlyProperty<int> BrightnessIntensity = MakeReadonlyProperty<&RelativeBrightness::BrightnessIntensity>([this]() { return _brightnessIntensity; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

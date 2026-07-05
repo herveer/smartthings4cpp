@@ -12,7 +12,7 @@ namespace standard {
 
 		IlluminanceMeasurement(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<double> Illuminance{ [this]() { return _illuminance; } };
+		ReactiveLitepp::ReadonlyProperty<double> Illuminance = MakeReadonlyProperty<&IlluminanceMeasurement::Illuminance>([this]() { return _illuminance; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

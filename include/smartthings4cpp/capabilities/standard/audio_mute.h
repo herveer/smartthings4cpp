@@ -12,7 +12,7 @@ namespace standard {
 
 		AudioMute(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Mute{ [this]() { return _mute; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Mute = MakeReadonlyProperty<&AudioMute::Mute>([this]() { return _mute; });
 
 		Result<void> setMute(const std::string& state);
 		Result<void> mute();

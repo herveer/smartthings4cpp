@@ -12,7 +12,7 @@ namespace samsungce {
 
 		WaterConsumptionReport(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> WaterConsumption{ [this]() { return _waterConsumption; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> WaterConsumption = MakeReadonlyProperty<&WaterConsumptionReport::WaterConsumption>([this]() { return _waterConsumption; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

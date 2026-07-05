@@ -12,12 +12,12 @@ namespace custom {
 
 		WaterFilter(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> WaterFilterUsageStep{ [this]() { return _waterFilterUsageStep; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> WaterFilterResetType{ [this]() { return _waterFilterResetType; } };
-		ReactiveLitepp::ReadonlyProperty<int> WaterFilterCapacity{ [this]() { return _waterFilterCapacity; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> WaterFilterLastResetDate{ [this]() { return _waterFilterLastResetDate; } };
-		ReactiveLitepp::ReadonlyProperty<int> WaterFilterUsage{ [this]() { return _waterFilterUsage; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> WaterFilterStatus{ [this]() { return _waterFilterStatus; } };
+		ReactiveLitepp::ReadonlyProperty<int> WaterFilterUsageStep = MakeReadonlyProperty<&WaterFilter::WaterFilterUsageStep>([this]() { return _waterFilterUsageStep; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> WaterFilterResetType = MakeReadonlyProperty<&WaterFilter::WaterFilterResetType>([this]() { return _waterFilterResetType; });
+		ReactiveLitepp::ReadonlyProperty<int> WaterFilterCapacity = MakeReadonlyProperty<&WaterFilter::WaterFilterCapacity>([this]() { return _waterFilterCapacity; });
+		ReactiveLitepp::ReadonlyProperty<std::string> WaterFilterLastResetDate = MakeReadonlyProperty<&WaterFilter::WaterFilterLastResetDate>([this]() { return _waterFilterLastResetDate; });
+		ReactiveLitepp::ReadonlyProperty<int> WaterFilterUsage = MakeReadonlyProperty<&WaterFilter::WaterFilterUsage>([this]() { return _waterFilterUsage; });
+		ReactiveLitepp::ReadonlyProperty<std::string> WaterFilterStatus = MakeReadonlyProperty<&WaterFilter::WaterFilterStatus>([this]() { return _waterFilterStatus; });
 
 		Result<void> resetWaterFilter();
 		std::vector<std::string> commandNames() const override { return { "resetWaterFilter" }; }

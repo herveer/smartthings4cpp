@@ -12,7 +12,7 @@ namespace samsungce {
 
 		WeightMeasurement(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<double> Weight{ [this]() { return _weight; } };
+		ReactiveLitepp::ReadonlyProperty<double> Weight = MakeReadonlyProperty<&WeightMeasurement::Weight>([this]() { return _weight; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

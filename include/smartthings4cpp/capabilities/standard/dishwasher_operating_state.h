@@ -12,11 +12,11 @@ namespace standard {
 
 		DishwasherOperatingState(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> CompletionTime{ [this]() { return _completionTime; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> MachineState{ [this]() { return _machineState; } };
-		ReactiveLitepp::ReadonlyProperty<int> Progress{ [this]() { return _progress; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedMachineStates{ [this]() { return _supportedMachineStates; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> DishwasherJobState{ [this]() { return _dishwasherJobState; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> CompletionTime = MakeReadonlyProperty<&DishwasherOperatingState::CompletionTime>([this]() { return _completionTime; });
+		ReactiveLitepp::ReadonlyProperty<std::string> MachineState = MakeReadonlyProperty<&DishwasherOperatingState::MachineState>([this]() { return _machineState; });
+		ReactiveLitepp::ReadonlyProperty<int> Progress = MakeReadonlyProperty<&DishwasherOperatingState::Progress>([this]() { return _progress; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedMachineStates = MakeReadonlyProperty<&DishwasherOperatingState::SupportedMachineStates>([this]() { return _supportedMachineStates; });
+		ReactiveLitepp::ReadonlyProperty<std::string> DishwasherJobState = MakeReadonlyProperty<&DishwasherOperatingState::DishwasherJobState>([this]() { return _dishwasherJobState; });
 
 		Result<void> setMachineState(const std::string& state);
 		std::vector<std::string> commandNames() const override { return { "setMachineState" }; }

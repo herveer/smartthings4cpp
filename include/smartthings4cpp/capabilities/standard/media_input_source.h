@@ -12,8 +12,8 @@ namespace standard {
 
 		MediaInputSource(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedInputSources{ [this]() { return _supportedInputSources; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> InputSource{ [this]() { return _inputSource; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedInputSources = MakeReadonlyProperty<&MediaInputSource::SupportedInputSources>([this]() { return _supportedInputSources; });
+		ReactiveLitepp::ReadonlyProperty<std::string> InputSource = MakeReadonlyProperty<&MediaInputSource::InputSource>([this]() { return _inputSource; });
 
 		Result<void> setInputSource(const std::string& mode);
 		std::vector<std::string> commandNames() const override { return { "setInputSource" }; }

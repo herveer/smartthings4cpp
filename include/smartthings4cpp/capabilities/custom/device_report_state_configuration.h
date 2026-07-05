@@ -12,9 +12,9 @@ namespace custom {
 
 		DeviceReportStateConfiguration(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> ReportStateRealtimePeriod{ [this]() { return _reportStateRealtimePeriod; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ReportStateRealtime{ [this]() { return _reportStateRealtime; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> ReportStatePeriod{ [this]() { return _reportStatePeriod; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> ReportStateRealtimePeriod = MakeReadonlyProperty<&DeviceReportStateConfiguration::ReportStateRealtimePeriod>([this]() { return _reportStateRealtimePeriod; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ReportStateRealtime = MakeReadonlyProperty<&DeviceReportStateConfiguration::ReportStateRealtime>([this]() { return _reportStateRealtime; });
+		ReactiveLitepp::ReadonlyProperty<std::string> ReportStatePeriod = MakeReadonlyProperty<&DeviceReportStateConfiguration::ReportStatePeriod>([this]() { return _reportStatePeriod; });
 
 		Result<void> setReportStatePeriod(const std::string& value);
 		Result<void> setReportStateRealtime(const nlohmann::json& value);

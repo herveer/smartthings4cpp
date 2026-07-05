@@ -12,8 +12,8 @@ namespace samsungce {
 
 		TemperatureSetting(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedDesiredTemperatures{ [this]() { return _supportedDesiredTemperatures; } };
-		ReactiveLitepp::ReadonlyProperty<double> DesiredTemperature{ [this]() { return _desiredTemperature; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedDesiredTemperatures = MakeReadonlyProperty<&TemperatureSetting::SupportedDesiredTemperatures>([this]() { return _supportedDesiredTemperatures; });
+		ReactiveLitepp::ReadonlyProperty<double> DesiredTemperature = MakeReadonlyProperty<&TemperatureSetting::DesiredTemperature>([this]() { return _desiredTemperature; });
 
 		Result<void> setDesiredTemperature(double desiredTemperature);
 		std::vector<std::string> commandNames() const override { return { "setDesiredTemperature" }; }

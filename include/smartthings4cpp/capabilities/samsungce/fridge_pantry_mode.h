@@ -12,8 +12,8 @@ namespace samsungce {
 
 		FridgePantryMode(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Mode{ [this]() { return _mode; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedModes{ [this]() { return _supportedModes; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Mode = MakeReadonlyProperty<&FridgePantryMode::Mode>([this]() { return _mode; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedModes = MakeReadonlyProperty<&FridgePantryMode::SupportedModes>([this]() { return _supportedModes; });
 
 		Result<void> setMode(const std::string& mode);
 		std::vector<std::string> commandNames() const override { return { "setMode" }; }

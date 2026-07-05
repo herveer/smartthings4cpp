@@ -12,8 +12,8 @@ namespace custom {
 
 		DryerDryLevel(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> DryerDryLevelValue{ [this]() { return _dryerDryLevelValue; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedDryerDryLevel{ [this]() { return _supportedDryerDryLevel; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> DryerDryLevelValue = MakeReadonlyProperty<&DryerDryLevel::DryerDryLevelValue>([this]() { return _dryerDryLevelValue; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedDryerDryLevel = MakeReadonlyProperty<&DryerDryLevel::SupportedDryerDryLevel>([this]() { return _supportedDryerDryLevel; });
 
 		Result<void> setDryerDryLevel(const std::string& dryLevel);
 		std::vector<std::string> commandNames() const override { return { "setDryerDryLevel" }; }

@@ -12,7 +12,7 @@ namespace samsungvd {
 
 		AmbientContent(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedAmbientApps{ [this]() { return _supportedAmbientApps; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedAmbientApps = MakeReadonlyProperty<&AmbientContent::SupportedAmbientApps>([this]() { return _supportedAmbientApps; });
 
 		Result<void> setAmbientContent(const std::string& id);
 		std::vector<std::string> commandNames() const override { return { "setAmbientContent" }; }

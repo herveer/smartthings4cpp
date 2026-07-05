@@ -12,9 +12,9 @@ namespace samsungce {
 
 		FridgeWelcomeLighting(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> DetectionProximity{ [this]() { return _detectionProximity; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedDetectionProximities{ [this]() { return _supportedDetectionProximities; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Status{ [this]() { return _status; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> DetectionProximity = MakeReadonlyProperty<&FridgeWelcomeLighting::DetectionProximity>([this]() { return _detectionProximity; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedDetectionProximities = MakeReadonlyProperty<&FridgeWelcomeLighting::SupportedDetectionProximities>([this]() { return _supportedDetectionProximities; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Status = MakeReadonlyProperty<&FridgeWelcomeLighting::Status>([this]() { return _status; });
 
 		Result<void> setDetectionProximity(const std::string& detectionProximity);
 		Result<void> off();

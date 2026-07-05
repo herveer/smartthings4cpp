@@ -12,11 +12,11 @@ namespace samsungce {
 
 		SelfCheck(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> ResultAttr{ [this]() { return _resultAttr; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedActions{ [this]() { return _supportedActions; } };
-		ReactiveLitepp::ReadonlyProperty<int> Progress{ [this]() { return _progress; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Errors{ [this]() { return _errors; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Status{ [this]() { return _status; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> ResultAttr = MakeReadonlyProperty<&SelfCheck::ResultAttr>([this]() { return _resultAttr; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedActions = MakeReadonlyProperty<&SelfCheck::SupportedActions>([this]() { return _supportedActions; });
+		ReactiveLitepp::ReadonlyProperty<int> Progress = MakeReadonlyProperty<&SelfCheck::Progress>([this]() { return _progress; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Errors = MakeReadonlyProperty<&SelfCheck::Errors>([this]() { return _errors; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Status = MakeReadonlyProperty<&SelfCheck::Status>([this]() { return _status; });
 
 		Result<void> cancelSelfCheck();
 		Result<void> startSelfCheck();

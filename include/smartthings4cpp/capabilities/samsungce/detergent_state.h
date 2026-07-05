@@ -12,10 +12,10 @@ namespace samsungce {
 
 		DetergentState(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<double> RemainingAmount{ [this]() { return _remainingAmount; } };
-		ReactiveLitepp::ReadonlyProperty<double> Dosage{ [this]() { return _dosage; } };
-		ReactiveLitepp::ReadonlyProperty<double> InitialAmount{ [this]() { return _initialAmount; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> DetergentType{ [this]() { return _detergentType; } };
+		ReactiveLitepp::ReadonlyProperty<double> RemainingAmount = MakeReadonlyProperty<&DetergentState::RemainingAmount>([this]() { return _remainingAmount; });
+		ReactiveLitepp::ReadonlyProperty<double> Dosage = MakeReadonlyProperty<&DetergentState::Dosage>([this]() { return _dosage; });
+		ReactiveLitepp::ReadonlyProperty<double> InitialAmount = MakeReadonlyProperty<&DetergentState::InitialAmount>([this]() { return _initialAmount; });
+		ReactiveLitepp::ReadonlyProperty<std::string> DetergentType = MakeReadonlyProperty<&DetergentState::DetergentType>([this]() { return _detergentType; });
 
 		Result<void> setDetergentType(const std::string& detergentType);
 		Result<void> setInitialAmount(double amount);

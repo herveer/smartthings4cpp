@@ -12,12 +12,12 @@ namespace custom {
 
 		DeodorFilter(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> DeodorFilterCapacity{ [this]() { return _deodorFilterCapacity; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> DeodorFilterLastResetDate{ [this]() { return _deodorFilterLastResetDate; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> DeodorFilterStatus{ [this]() { return _deodorFilterStatus; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> DeodorFilterResetType{ [this]() { return _deodorFilterResetType; } };
-		ReactiveLitepp::ReadonlyProperty<int> DeodorFilterUsage{ [this]() { return _deodorFilterUsage; } };
-		ReactiveLitepp::ReadonlyProperty<int> DeodorFilterUsageStep{ [this]() { return _deodorFilterUsageStep; } };
+		ReactiveLitepp::ReadonlyProperty<int> DeodorFilterCapacity = MakeReadonlyProperty<&DeodorFilter::DeodorFilterCapacity>([this]() { return _deodorFilterCapacity; });
+		ReactiveLitepp::ReadonlyProperty<std::string> DeodorFilterLastResetDate = MakeReadonlyProperty<&DeodorFilter::DeodorFilterLastResetDate>([this]() { return _deodorFilterLastResetDate; });
+		ReactiveLitepp::ReadonlyProperty<std::string> DeodorFilterStatus = MakeReadonlyProperty<&DeodorFilter::DeodorFilterStatus>([this]() { return _deodorFilterStatus; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> DeodorFilterResetType = MakeReadonlyProperty<&DeodorFilter::DeodorFilterResetType>([this]() { return _deodorFilterResetType; });
+		ReactiveLitepp::ReadonlyProperty<int> DeodorFilterUsage = MakeReadonlyProperty<&DeodorFilter::DeodorFilterUsage>([this]() { return _deodorFilterUsage; });
+		ReactiveLitepp::ReadonlyProperty<int> DeodorFilterUsageStep = MakeReadonlyProperty<&DeodorFilter::DeodorFilterUsageStep>([this]() { return _deodorFilterUsageStep; });
 
 		Result<void> resetDeodorFilter();
 		std::vector<std::string> commandNames() const override { return { "resetDeodorFilter" }; }

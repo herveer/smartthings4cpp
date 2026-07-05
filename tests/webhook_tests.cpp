@@ -9,6 +9,8 @@
 #include "smartthings4cpp/json_utils.h"
 #include "smartthings4cpp/oauth2/oauth2_types.h"
 
+#include "loopback_http.h"
+
 #include <chrono>
 #include <map>
 #include <memory>
@@ -228,29 +230,14 @@ TEST_CASE("handleWebhook fans one event out to every Device sharing the id", "[w
 TEST_CASE("buildSubscriptionBody produces the SmartThings device-subscription shape", "[webhook]") {
 	SubscriptionRequest request;
 	request.deviceId = "DEV-1";
-	request.capability = "switch";
-	request.attribute = "switch";
 
 	auto body = buildSubscriptionBody(request);
 
 	REQUIRE(body["sourceType"] == "DEVICE");
 	REQUIRE(body["device"]["deviceId"] == "DEV-1");
-	REQUIRE(body["device"]["componentId"] == "main");
-	REQUIRE(body["device"]["capability"] == "switch");
-	REQUIRE(body["device"]["attribute"] == "switch");
 	REQUIRE(body["device"]["stateChangeOnly"] == true);
-	REQUIRE(body["device"]["subscriptionName"].is_string());
-	REQUIRE_FALSE(body["device"]["subscriptionName"].get<std::string>().empty());
-}
-
-TEST_CASE("buildSubscriptionBody defaults capability/attribute to the wildcard", "[webhook]") {
-	SubscriptionRequest request;
-	request.deviceId = "DEV-1";
-
-	auto body = buildSubscriptionBody(request);
-
-	REQUIRE(body["device"]["capability"] == "*");
-	REQUIRE(body["device"]["attribute"] == "*");
+	REQUIRE(body["subscriptionName"].is_string());
+	REQUIRE_FALSE(body["subscriptionName"].get<std::string>().empty());
 }
 
 TEST_CASE("subscription calls require an OAuth-mode Client (no network)", "[webhook]") {
@@ -338,6 +325,18 @@ TEST_CASE("authenticate() is silent when a valid token is already stored", "[web
 
 	Client client(testConfig(), std::make_unique<StubHttpServer>(),
 		std::move(keychain), std::make_unique<InMemoryStorage>());
+
+	// authenticate() confirms a stored, unexpired token against the API (a
+	// lightweight GET /devices) before trusting it. Stand up the library's own
+	// embedded server on loopback with its GET route mapped to "/devices" - it
+	// answers 200, which is all validateAuthentication() checks - and point the
+	// Client at it, so the probe succeeds without ever leaving the machine.
+	auto apiPort = testutil::freeLoopbackPort();
+	auto api = makeDefaultHttpServer(apiPort, "/devices", "/unused",
+		"http://localhost:" + std::to_string(apiPort));
+	api->bind([](std::string) {}, [](nlohmann::json) { return nlohmann::json::object(); });
+	REQUIRE(api->start().isSuccess());
+	client.setBaseUrl("http://localhost:" + std::to_string(apiPort));
 
 	bool browserRequested = false;
 	auto browserSub = client.openBrowserRequested.SubscribeScoped(

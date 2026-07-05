@@ -12,7 +12,7 @@ namespace standard {
 
 		WindowShadeLevel(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> ShadeLevel{ [this]() { return _shadeLevel; } };
+		ReactiveLitepp::ReadonlyProperty<int> ShadeLevel = MakeReadonlyProperty<&WindowShadeLevel::ShadeLevel>([this]() { return _shadeLevel; });
 
 		Result<void> setShadeLevel(int shadeLevel);
 		std::vector<std::string> commandNames() const override { return { "setShadeLevel" }; }

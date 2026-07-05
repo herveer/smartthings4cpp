@@ -12,7 +12,7 @@ namespace samsungce {
 
 		QuickControl(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> VersionAttr{ [this]() { return _versionAttr; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> VersionAttr = MakeReadonlyProperty<&QuickControl::VersionAttr>([this]() { return _versionAttr; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

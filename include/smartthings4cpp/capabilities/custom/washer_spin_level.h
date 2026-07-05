@@ -12,8 +12,8 @@ namespace custom {
 
 		WasherSpinLevel(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherSpinLevelValue{ [this]() { return _washerSpinLevelValue; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWasherSpinLevel{ [this]() { return _supportedWasherSpinLevel; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherSpinLevelValue = MakeReadonlyProperty<&WasherSpinLevel::WasherSpinLevelValue>([this]() { return _washerSpinLevelValue; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWasherSpinLevel = MakeReadonlyProperty<&WasherSpinLevel::SupportedWasherSpinLevel>([this]() { return _supportedWasherSpinLevel; });
 
 		Result<void> setWasherSpinLevel(const std::string& spinLevel);
 		std::vector<std::string> commandNames() const override { return { "setWasherSpinLevel" }; }

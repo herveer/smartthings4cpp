@@ -12,7 +12,7 @@ namespace samsungce {
 
 		WelcomeMessage(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> WelcomeMessageValue{ [this]() { return _welcomeMessageValue; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> WelcomeMessageValue = MakeReadonlyProperty<&WelcomeMessage::WelcomeMessageValue>([this]() { return _welcomeMessageValue; });
 
 		Result<void> deleteWelcomeMessage();
 		Result<void> setWelcomeMessage(const nlohmann::json& welcomeMessage);

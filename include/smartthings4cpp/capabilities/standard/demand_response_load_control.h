@@ -12,7 +12,7 @@ namespace standard {
 
 		DemandResponseLoadControl(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DrlcStatus{ [this]() { return _drlcStatus; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DrlcStatus = MakeReadonlyProperty<&DemandResponseLoadControl::DrlcStatus>([this]() { return _drlcStatus; });
 
 		Result<void> overrideDrlcAction(bool value);
 		Result<void> requestDrlcAction(int drlcType, int drlcLevel, const std::string& start, int duration, int reportingPeriod);

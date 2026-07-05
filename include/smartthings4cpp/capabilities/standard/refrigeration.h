@@ -12,9 +12,9 @@ namespace standard {
 
 		Refrigeration(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Defrost{ [this]() { return _defrost; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> RapidCooling{ [this]() { return _rapidCooling; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> RapidFreezing{ [this]() { return _rapidFreezing; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Defrost = MakeReadonlyProperty<&Refrigeration::Defrost>([this]() { return _defrost; });
+		ReactiveLitepp::ReadonlyProperty<std::string> RapidCooling = MakeReadonlyProperty<&Refrigeration::RapidCooling>([this]() { return _rapidCooling; });
+		ReactiveLitepp::ReadonlyProperty<std::string> RapidFreezing = MakeReadonlyProperty<&Refrigeration::RapidFreezing>([this]() { return _rapidFreezing; });
 
 		Result<void> setDefrost(const std::string& defrost);
 		Result<void> setRapidFreezing(const std::string& rapidFreezing);

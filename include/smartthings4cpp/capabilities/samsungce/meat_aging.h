@@ -12,10 +12,10 @@ namespace samsungce {
 
 		MeatAging(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ZoneInfo{ [this]() { return _zoneInfo; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedMeatTypes{ [this]() { return _supportedMeatTypes; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedAgingMethods{ [this]() { return _supportedAgingMethods; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Status{ [this]() { return _status; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ZoneInfo = MakeReadonlyProperty<&MeatAging::ZoneInfo>([this]() { return _zoneInfo; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedMeatTypes = MakeReadonlyProperty<&MeatAging::SupportedMeatTypes>([this]() { return _supportedMeatTypes; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedAgingMethods = MakeReadonlyProperty<&MeatAging::SupportedAgingMethods>([this]() { return _supportedAgingMethods; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Status = MakeReadonlyProperty<&MeatAging::Status>([this]() { return _status; });
 
 		Result<void> addAging(const nlohmann::json& agingOption);
 		Result<void> cancelAging(int id);

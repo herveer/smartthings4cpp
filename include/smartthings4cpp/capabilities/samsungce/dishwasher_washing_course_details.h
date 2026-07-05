@@ -12,9 +12,9 @@ namespace samsungce {
 
 		DishwasherWashingCourseDetails(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> PredefinedCourses{ [this]() { return _predefinedCourses; } };
-		ReactiveLitepp::ReadonlyProperty<int> WaterUsageMax{ [this]() { return _waterUsageMax; } };
-		ReactiveLitepp::ReadonlyProperty<int> EnergyUsageMax{ [this]() { return _energyUsageMax; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> PredefinedCourses = MakeReadonlyProperty<&DishwasherWashingCourseDetails::PredefinedCourses>([this]() { return _predefinedCourses; });
+		ReactiveLitepp::ReadonlyProperty<int> WaterUsageMax = MakeReadonlyProperty<&DishwasherWashingCourseDetails::WaterUsageMax>([this]() { return _waterUsageMax; });
+		ReactiveLitepp::ReadonlyProperty<int> EnergyUsageMax = MakeReadonlyProperty<&DishwasherWashingCourseDetails::EnergyUsageMax>([this]() { return _energyUsageMax; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

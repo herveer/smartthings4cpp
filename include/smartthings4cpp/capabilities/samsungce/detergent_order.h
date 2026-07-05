@@ -12,8 +12,8 @@ namespace samsungce {
 
 		DetergentOrder(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<bool> AlarmEnabled{ [this]() { return _alarmEnabled; } };
-		ReactiveLitepp::ReadonlyProperty<double> OrderThreshold{ [this]() { return _orderThreshold; } };
+		ReactiveLitepp::ReadonlyProperty<bool> AlarmEnabled = MakeReadonlyProperty<&DetergentOrder::AlarmEnabled>([this]() { return _alarmEnabled; });
+		ReactiveLitepp::ReadonlyProperty<double> OrderThreshold = MakeReadonlyProperty<&DetergentOrder::OrderThreshold>([this]() { return _orderThreshold; });
 
 		Result<void> enableAlarm();
 		Result<void> setOrderThreshold(double threshold);

@@ -12,7 +12,7 @@ namespace samsungim {
 
 		HueSyncMode(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Mode{ [this]() { return _mode; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Mode = MakeReadonlyProperty<&HueSyncMode::Mode>([this]() { return _mode; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

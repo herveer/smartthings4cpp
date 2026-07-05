@@ -12,23 +12,23 @@ namespace samsungce {
 
 		Accessibility(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedColorInversions{ [this]() { return _supportedColorInversions; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Magnification{ [this]() { return _magnification; } };
-		ReactiveLitepp::ReadonlyProperty<int> MagnificationLevel{ [this]() { return _magnificationLevel; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> HighContrast{ [this]() { return _highContrast; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> VoiceGuide{ [this]() { return _voiceGuide; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedVoiceGuides{ [this]() { return _supportedVoiceGuides; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> ColorInversion{ [this]() { return _colorInversion; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Grayscale{ [this]() { return _grayscale; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedReluminos{ [this]() { return _supportedReluminos; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedMagnificationLevels{ [this]() { return _supportedMagnificationLevels; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedMagnifications{ [this]() { return _supportedMagnifications; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Relumino{ [this]() { return _relumino; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedOptions{ [this]() { return _supportedOptions; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedHighContrasts{ [this]() { return _supportedHighContrasts; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedFontSizes{ [this]() { return _supportedFontSizes; } };
-		ReactiveLitepp::ReadonlyProperty<int> FontSize{ [this]() { return _fontSize; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedGrayscales{ [this]() { return _supportedGrayscales; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedColorInversions = MakeReadonlyProperty<&Accessibility::SupportedColorInversions>([this]() { return _supportedColorInversions; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Magnification = MakeReadonlyProperty<&Accessibility::Magnification>([this]() { return _magnification; });
+		ReactiveLitepp::ReadonlyProperty<int> MagnificationLevel = MakeReadonlyProperty<&Accessibility::MagnificationLevel>([this]() { return _magnificationLevel; });
+		ReactiveLitepp::ReadonlyProperty<std::string> HighContrast = MakeReadonlyProperty<&Accessibility::HighContrast>([this]() { return _highContrast; });
+		ReactiveLitepp::ReadonlyProperty<std::string> VoiceGuide = MakeReadonlyProperty<&Accessibility::VoiceGuide>([this]() { return _voiceGuide; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedVoiceGuides = MakeReadonlyProperty<&Accessibility::SupportedVoiceGuides>([this]() { return _supportedVoiceGuides; });
+		ReactiveLitepp::ReadonlyProperty<std::string> ColorInversion = MakeReadonlyProperty<&Accessibility::ColorInversion>([this]() { return _colorInversion; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Grayscale = MakeReadonlyProperty<&Accessibility::Grayscale>([this]() { return _grayscale; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedReluminos = MakeReadonlyProperty<&Accessibility::SupportedReluminos>([this]() { return _supportedReluminos; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedMagnificationLevels = MakeReadonlyProperty<&Accessibility::SupportedMagnificationLevels>([this]() { return _supportedMagnificationLevels; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedMagnifications = MakeReadonlyProperty<&Accessibility::SupportedMagnifications>([this]() { return _supportedMagnifications; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Relumino = MakeReadonlyProperty<&Accessibility::Relumino>([this]() { return _relumino; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedOptions = MakeReadonlyProperty<&Accessibility::SupportedOptions>([this]() { return _supportedOptions; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedHighContrasts = MakeReadonlyProperty<&Accessibility::SupportedHighContrasts>([this]() { return _supportedHighContrasts; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedFontSizes = MakeReadonlyProperty<&Accessibility::SupportedFontSizes>([this]() { return _supportedFontSizes; });
+		ReactiveLitepp::ReadonlyProperty<int> FontSize = MakeReadonlyProperty<&Accessibility::FontSize>([this]() { return _fontSize; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedGrayscales = MakeReadonlyProperty<&Accessibility::SupportedGrayscales>([this]() { return _supportedGrayscales; });
 
 		Result<void> setVoiceGuide(const std::string& voiceGuide);
 		Result<void> setRelumino(const std::string& relumino);

@@ -12,13 +12,13 @@ namespace samsungvd {
 
 		SupportsFeatures(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<bool> MediaOutputSupported{ [this]() { return _mediaOutputSupported; } };
-		ReactiveLitepp::ReadonlyProperty<bool> ImeAdvSupported{ [this]() { return _imeAdvSupported; } };
-		ReactiveLitepp::ReadonlyProperty<bool> WifiUpdateSupport{ [this]() { return _wifiUpdateSupport; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> ExecutableServiceList{ [this]() { return _executableServiceList; } };
-		ReactiveLitepp::ReadonlyProperty<bool> RemotelessSupported{ [this]() { return _remotelessSupported; } };
-		ReactiveLitepp::ReadonlyProperty<bool> ArtSupported{ [this]() { return _artSupported; } };
-		ReactiveLitepp::ReadonlyProperty<bool> MobileCamSupported{ [this]() { return _mobileCamSupported; } };
+		ReactiveLitepp::ReadonlyProperty<bool> MediaOutputSupported = MakeReadonlyProperty<&SupportsFeatures::MediaOutputSupported>([this]() { return _mediaOutputSupported; });
+		ReactiveLitepp::ReadonlyProperty<bool> ImeAdvSupported = MakeReadonlyProperty<&SupportsFeatures::ImeAdvSupported>([this]() { return _imeAdvSupported; });
+		ReactiveLitepp::ReadonlyProperty<bool> WifiUpdateSupport = MakeReadonlyProperty<&SupportsFeatures::WifiUpdateSupport>([this]() { return _wifiUpdateSupport; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> ExecutableServiceList = MakeReadonlyProperty<&SupportsFeatures::ExecutableServiceList>([this]() { return _executableServiceList; });
+		ReactiveLitepp::ReadonlyProperty<bool> RemotelessSupported = MakeReadonlyProperty<&SupportsFeatures::RemotelessSupported>([this]() { return _remotelessSupported; });
+		ReactiveLitepp::ReadonlyProperty<bool> ArtSupported = MakeReadonlyProperty<&SupportsFeatures::ArtSupported>([this]() { return _artSupported; });
+		ReactiveLitepp::ReadonlyProperty<bool> MobileCamSupported = MakeReadonlyProperty<&SupportsFeatures::MobileCamSupported>([this]() { return _mobileCamSupported; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

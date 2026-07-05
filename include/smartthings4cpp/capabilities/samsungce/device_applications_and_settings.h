@@ -12,8 +12,8 @@ namespace samsungce {
 
 		DeviceApplicationsAndSettings(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DeviceApplications{ [this]() { return _deviceApplications; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DeviceSettings{ [this]() { return _deviceSettings; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DeviceApplications = MakeReadonlyProperty<&DeviceApplicationsAndSettings::DeviceApplications>([this]() { return _deviceApplications; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DeviceSettings = MakeReadonlyProperty<&DeviceApplicationsAndSettings::DeviceSettings>([this]() { return _deviceSettings; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

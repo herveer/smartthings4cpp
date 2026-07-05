@@ -12,9 +12,9 @@ namespace samsungce {
 
 		ViewInside(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFocusAreas{ [this]() { return _supportedFocusAreas; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Contents{ [this]() { return _contents; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> LastUpdatedTime{ [this]() { return _lastUpdatedTime; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFocusAreas = MakeReadonlyProperty<&ViewInside::SupportedFocusAreas>([this]() { return _supportedFocusAreas; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Contents = MakeReadonlyProperty<&ViewInside::Contents>([this]() { return _contents; });
+		ReactiveLitepp::ReadonlyProperty<std::string> LastUpdatedTime = MakeReadonlyProperty<&ViewInside::LastUpdatedTime>([this]() { return _lastUpdatedTime; });
 
 		Result<void> refreshSpecificArea(const std::string& focusArea);
 		Result<void> refreshAll();

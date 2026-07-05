@@ -12,8 +12,8 @@ namespace samsungce {
 
 		FreezerConvertMode(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFreezerConvertModes{ [this]() { return _supportedFreezerConvertModes; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> FreezerConvertModeValue{ [this]() { return _freezerConvertModeValue; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFreezerConvertModes = MakeReadonlyProperty<&FreezerConvertMode::SupportedFreezerConvertModes>([this]() { return _supportedFreezerConvertModes; });
+		ReactiveLitepp::ReadonlyProperty<std::string> FreezerConvertModeValue = MakeReadonlyProperty<&FreezerConvertMode::FreezerConvertModeValue>([this]() { return _freezerConvertModeValue; });
 
 		Result<void> setFreezerConvertMode(const std::string& freezerConvertMode);
 		std::vector<std::string> commandNames() const override { return { "setFreezerConvertMode" }; }

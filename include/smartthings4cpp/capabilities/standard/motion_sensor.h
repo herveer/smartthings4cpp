@@ -12,7 +12,7 @@ namespace standard {
 
 		MotionSensor(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Motion{ [this]() { return _motion; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Motion = MakeReadonlyProperty<&MotionSensor::Motion>([this]() { return _motion; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

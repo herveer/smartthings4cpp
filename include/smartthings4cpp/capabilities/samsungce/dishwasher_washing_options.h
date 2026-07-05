@@ -12,21 +12,21 @@ namespace samsungce {
 
 		DishwasherWashingOptions(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DryPlus{ [this]() { return _dryPlus; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> StormWash{ [this]() { return _stormWash; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> MultiTab{ [this]() { return _multiTab; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> HotAirDry{ [this]() { return _hotAirDry; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SelectedZone{ [this]() { return _selectedZone; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SpeedBooster{ [this]() { return _speedBooster; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> HighTempWash{ [this]() { return _highTempWash; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SanitizingWash{ [this]() { return _sanitizingWash; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> HeatedDry{ [this]() { return _heatedDry; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ZoneBooster{ [this]() { return _zoneBooster; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> AddRinse{ [this]() { return _addRinse; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedList{ [this]() { return _supportedList; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> RinsePlus{ [this]() { return _rinsePlus; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Sanitize{ [this]() { return _sanitize; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SteamSoak{ [this]() { return _steamSoak; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DryPlus = MakeReadonlyProperty<&DishwasherWashingOptions::DryPlus>([this]() { return _dryPlus; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> StormWash = MakeReadonlyProperty<&DishwasherWashingOptions::StormWash>([this]() { return _stormWash; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> MultiTab = MakeReadonlyProperty<&DishwasherWashingOptions::MultiTab>([this]() { return _multiTab; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> HotAirDry = MakeReadonlyProperty<&DishwasherWashingOptions::HotAirDry>([this]() { return _hotAirDry; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SelectedZone = MakeReadonlyProperty<&DishwasherWashingOptions::SelectedZone>([this]() { return _selectedZone; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SpeedBooster = MakeReadonlyProperty<&DishwasherWashingOptions::SpeedBooster>([this]() { return _speedBooster; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> HighTempWash = MakeReadonlyProperty<&DishwasherWashingOptions::HighTempWash>([this]() { return _highTempWash; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SanitizingWash = MakeReadonlyProperty<&DishwasherWashingOptions::SanitizingWash>([this]() { return _sanitizingWash; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> HeatedDry = MakeReadonlyProperty<&DishwasherWashingOptions::HeatedDry>([this]() { return _heatedDry; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ZoneBooster = MakeReadonlyProperty<&DishwasherWashingOptions::ZoneBooster>([this]() { return _zoneBooster; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> AddRinse = MakeReadonlyProperty<&DishwasherWashingOptions::AddRinse>([this]() { return _addRinse; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedList = MakeReadonlyProperty<&DishwasherWashingOptions::SupportedList>([this]() { return _supportedList; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> RinsePlus = MakeReadonlyProperty<&DishwasherWashingOptions::RinsePlus>([this]() { return _rinsePlus; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Sanitize = MakeReadonlyProperty<&DishwasherWashingOptions::Sanitize>([this]() { return _sanitize; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SteamSoak = MakeReadonlyProperty<&DishwasherWashingOptions::SteamSoak>([this]() { return _steamSoak; });
 
 		Result<void> setSelectedZone(const std::string& selectedZone);
 		Result<void> setSanitize(bool sanitize);

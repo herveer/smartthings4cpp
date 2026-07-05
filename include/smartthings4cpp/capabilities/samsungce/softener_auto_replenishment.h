@@ -12,12 +12,12 @@ namespace samsungce {
 
 		SoftenerAutoReplenishment(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> RegularSoftenerType{ [this]() { return _regularSoftenerType; } };
-		ReactiveLitepp::ReadonlyProperty<bool> RegularSoftenerAlarmEnabled{ [this]() { return _regularSoftenerAlarmEnabled; } };
-		ReactiveLitepp::ReadonlyProperty<double> RegularSoftenerInitialAmount{ [this]() { return _regularSoftenerInitialAmount; } };
-		ReactiveLitepp::ReadonlyProperty<double> RegularSoftenerRemainingAmount{ [this]() { return _regularSoftenerRemainingAmount; } };
-		ReactiveLitepp::ReadonlyProperty<double> RegularSoftenerDosage{ [this]() { return _regularSoftenerDosage; } };
-		ReactiveLitepp::ReadonlyProperty<double> RegularSoftenerOrderThreshold{ [this]() { return _regularSoftenerOrderThreshold; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> RegularSoftenerType = MakeReadonlyProperty<&SoftenerAutoReplenishment::RegularSoftenerType>([this]() { return _regularSoftenerType; });
+		ReactiveLitepp::ReadonlyProperty<bool> RegularSoftenerAlarmEnabled = MakeReadonlyProperty<&SoftenerAutoReplenishment::RegularSoftenerAlarmEnabled>([this]() { return _regularSoftenerAlarmEnabled; });
+		ReactiveLitepp::ReadonlyProperty<double> RegularSoftenerInitialAmount = MakeReadonlyProperty<&SoftenerAutoReplenishment::RegularSoftenerInitialAmount>([this]() { return _regularSoftenerInitialAmount; });
+		ReactiveLitepp::ReadonlyProperty<double> RegularSoftenerRemainingAmount = MakeReadonlyProperty<&SoftenerAutoReplenishment::RegularSoftenerRemainingAmount>([this]() { return _regularSoftenerRemainingAmount; });
+		ReactiveLitepp::ReadonlyProperty<double> RegularSoftenerDosage = MakeReadonlyProperty<&SoftenerAutoReplenishment::RegularSoftenerDosage>([this]() { return _regularSoftenerDosage; });
+		ReactiveLitepp::ReadonlyProperty<double> RegularSoftenerOrderThreshold = MakeReadonlyProperty<&SoftenerAutoReplenishment::RegularSoftenerOrderThreshold>([this]() { return _regularSoftenerOrderThreshold; });
 
 		Result<void> enableAlarm(const std::string& name);
 		Result<void> setOrderThreshold(const std::string& name, double threshold);

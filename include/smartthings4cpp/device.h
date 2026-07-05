@@ -59,24 +59,24 @@ namespace smartthings4cpp {
 		Device& operator=(Device&&) = delete;
 
 		/** @brief The device's unique identifier (read-only) */
-		ReadonlyProperty<std::string> Id{ [this]() { return _id; } };
+		ReadonlyProperty<std::string> Id = MakeReadonlyProperty<&Device::Id>([this]() { return _id; });
 		/** @brief The user-given label of the device, falling back to its name (read-only) */
-		ReadonlyProperty<std::string> Label{ [this]() { return _label; } };
+		ReadonlyProperty<std::string> Label = MakeReadonlyProperty<&Device::Label>([this]() { return _label; });
 		/** @brief The device type name reported by the integration (read-only) */
-		ReadonlyProperty<std::string> Name{ [this]() { return _name; } };
+		ReadonlyProperty<std::string> Name = MakeReadonlyProperty<&Device::Name>([this]() { return _name; });
 		/** @brief Name of the device manufacturer (read-only) */
-		ReadonlyProperty<std::string> ManufacturerName{ [this]() { return _manufacturerName; } };
+		ReadonlyProperty<std::string> ManufacturerName = MakeReadonlyProperty<&Device::ManufacturerName>([this]() { return _manufacturerName; });
 		/** @brief Integration type, e.g. "ZIGBEE", "ZWAVE", "OCF", "VIRTUAL" (read-only) */
-		ReadonlyProperty<std::string> Type{ [this]() { return _type; } };
+		ReadonlyProperty<std::string> Type = MakeReadonlyProperty<&Device::Type>([this]() { return _type; });
 		/** @brief Identifier of the location the device belongs to (read-only) */
-		ReadonlyProperty<std::string> LocationId{ [this]() { return _locationId; } };
+		ReadonlyProperty<std::string> LocationId = MakeReadonlyProperty<&Device::LocationId>([this]() { return _locationId; });
 		/** @brief Identifier of the room the device is assigned to (read-only) */
-		ReadonlyProperty<std::string> RoomId{ [this]() { return _roomId; } };
+		ReadonlyProperty<std::string> RoomId = MakeReadonlyProperty<&Device::RoomId>([this]() { return _roomId; });
 		/** @brief Presentation identifier used by the SmartThings UI (read-only) */
-		ReadonlyProperty<std::string> PresentationId{ [this]() { return _presentationId; } };
+		ReadonlyProperty<std::string> PresentationId = MakeReadonlyProperty<&Device::PresentationId>([this]() { return _presentationId; });
 
 		/** @brief Whether the device's status has been fetched at least once (read-only) */
-		ReadonlyProperty<bool> HasBeenRefreshed{ [this]() { return _hasBeenRefreshed; } };
+		ReadonlyProperty<bool> HasBeenRefreshed = MakeReadonlyProperty<&Device::HasBeenRefreshed>([this]() { return _hasBeenRefreshed; });
 
 		/**
 		 * @brief Get the components owned by this device

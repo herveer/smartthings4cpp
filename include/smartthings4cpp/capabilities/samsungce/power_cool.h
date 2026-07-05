@@ -12,7 +12,7 @@ namespace samsungce {
 
 		PowerCool(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<bool> Activated{ [this]() { return _activated; } };
+		ReactiveLitepp::ReadonlyProperty<bool> Activated = MakeReadonlyProperty<&PowerCool::Activated>([this]() { return _activated; });
 
 		Result<void> activate();
 		Result<void> deactivate();

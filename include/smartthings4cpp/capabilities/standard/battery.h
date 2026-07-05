@@ -12,9 +12,9 @@ namespace standard {
 
 		Battery(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> Quantity{ [this]() { return _quantity; } };
-		ReactiveLitepp::ReadonlyProperty<int> BatteryValue{ [this]() { return _batteryValue; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Type{ [this]() { return _type; } };
+		ReactiveLitepp::ReadonlyProperty<int> Quantity = MakeReadonlyProperty<&Battery::Quantity>([this]() { return _quantity; });
+		ReactiveLitepp::ReadonlyProperty<int> BatteryValue = MakeReadonlyProperty<&Battery::BatteryValue>([this]() { return _batteryValue; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Type = MakeReadonlyProperty<&Battery::Type>([this]() { return _type; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

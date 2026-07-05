@@ -12,11 +12,11 @@ namespace samsungce {
 
 		AutoDispenseSoftener(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> RemainingAmount{ [this]() { return _remainingAmount; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Amount{ [this]() { return _amount; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedDensity{ [this]() { return _supportedDensity; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Density{ [this]() { return _density; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedAmount{ [this]() { return _supportedAmount; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> RemainingAmount = MakeReadonlyProperty<&AutoDispenseSoftener::RemainingAmount>([this]() { return _remainingAmount; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Amount = MakeReadonlyProperty<&AutoDispenseSoftener::Amount>([this]() { return _amount; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedDensity = MakeReadonlyProperty<&AutoDispenseSoftener::SupportedDensity>([this]() { return _supportedDensity; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Density = MakeReadonlyProperty<&AutoDispenseSoftener::Density>([this]() { return _density; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedAmount = MakeReadonlyProperty<&AutoDispenseSoftener::SupportedAmount>([this]() { return _supportedAmount; });
 
 		Result<void> setAmount(const std::string& amount);
 		Result<void> setDensity(const std::string& density);

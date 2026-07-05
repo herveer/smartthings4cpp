@@ -12,8 +12,8 @@ namespace standard {
 
 		ThermostatCoolingSetpoint(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> CoolingSetpointRange{ [this]() { return _coolingSetpointRange; } };
-		ReactiveLitepp::ReadonlyProperty<double> CoolingSetpoint{ [this]() { return _coolingSetpoint; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> CoolingSetpointRange = MakeReadonlyProperty<&ThermostatCoolingSetpoint::CoolingSetpointRange>([this]() { return _coolingSetpointRange; });
+		ReactiveLitepp::ReadonlyProperty<double> CoolingSetpoint = MakeReadonlyProperty<&ThermostatCoolingSetpoint::CoolingSetpoint>([this]() { return _coolingSetpoint; });
 
 		Result<void> setCoolingSetpoint(double setpoint);
 		std::vector<std::string> commandNames() const override { return { "setCoolingSetpoint" }; }

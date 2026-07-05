@@ -12,15 +12,15 @@ namespace samsungce {
 
 		DeviceIdentification(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> MicomAssayCode{ [this]() { return _micomAssayCode; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> ModelName{ [this]() { return _modelName; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> SerialNumber{ [this]() { return _serialNumber; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> SerialNumberExtra{ [this]() { return _serialNumberExtra; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> ReleaseCountry{ [this]() { return _releaseCountry; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> ModelClassificationCode{ [this]() { return _modelClassificationCode; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Description{ [this]() { return _description; } };
-		ReactiveLitepp::ReadonlyProperty<int> ReleaseYear{ [this]() { return _releaseYear; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> BinaryId{ [this]() { return _binaryId; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> MicomAssayCode = MakeReadonlyProperty<&DeviceIdentification::MicomAssayCode>([this]() { return _micomAssayCode; });
+		ReactiveLitepp::ReadonlyProperty<std::string> ModelName = MakeReadonlyProperty<&DeviceIdentification::ModelName>([this]() { return _modelName; });
+		ReactiveLitepp::ReadonlyProperty<std::string> SerialNumber = MakeReadonlyProperty<&DeviceIdentification::SerialNumber>([this]() { return _serialNumber; });
+		ReactiveLitepp::ReadonlyProperty<std::string> SerialNumberExtra = MakeReadonlyProperty<&DeviceIdentification::SerialNumberExtra>([this]() { return _serialNumberExtra; });
+		ReactiveLitepp::ReadonlyProperty<std::string> ReleaseCountry = MakeReadonlyProperty<&DeviceIdentification::ReleaseCountry>([this]() { return _releaseCountry; });
+		ReactiveLitepp::ReadonlyProperty<std::string> ModelClassificationCode = MakeReadonlyProperty<&DeviceIdentification::ModelClassificationCode>([this]() { return _modelClassificationCode; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Description = MakeReadonlyProperty<&DeviceIdentification::Description>([this]() { return _description; });
+		ReactiveLitepp::ReadonlyProperty<int> ReleaseYear = MakeReadonlyProperty<&DeviceIdentification::ReleaseYear>([this]() { return _releaseYear; });
+		ReactiveLitepp::ReadonlyProperty<std::string> BinaryId = MakeReadonlyProperty<&DeviceIdentification::BinaryId>([this]() { return _binaryId; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

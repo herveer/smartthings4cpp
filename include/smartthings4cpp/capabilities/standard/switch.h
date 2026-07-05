@@ -12,7 +12,7 @@ namespace standard {
 
 		Switch(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> SwitchValue{ [this]() { return _switchValue; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> SwitchValue = MakeReadonlyProperty<&Switch::SwitchValue>([this]() { return _switchValue; });
 
 		Result<void> off();
 		Result<void> on();

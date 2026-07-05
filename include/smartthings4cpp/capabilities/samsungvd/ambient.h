@@ -12,7 +12,7 @@ namespace samsungvd {
 
 		Ambient(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Info{ [this]() { return _info; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Info = MakeReadonlyProperty<&Ambient::Info>([this]() { return _info; });
 
 		Result<void> sendData(const nlohmann::json& data);
 		Result<void> setAmbientOn();

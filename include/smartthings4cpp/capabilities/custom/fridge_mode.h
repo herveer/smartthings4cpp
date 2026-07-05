@@ -12,11 +12,11 @@ namespace custom {
 
 		FridgeMode(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> FridgeModeValue{ [this]() { return _fridgeModeValue; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> FridgeModeValue_{ [this]() { return _fridgeModeValue_; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFridgeOptions{ [this]() { return _supportedFridgeOptions; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFullFridgeModes{ [this]() { return _supportedFullFridgeModes; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFridgeModes{ [this]() { return _supportedFridgeModes; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> FridgeModeValue = MakeReadonlyProperty<&FridgeMode::FridgeModeValue>([this]() { return _fridgeModeValue; });
+		ReactiveLitepp::ReadonlyProperty<std::string> FridgeModeValue_ = MakeReadonlyProperty<&FridgeMode::FridgeModeValue_>([this]() { return _fridgeModeValue_; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFridgeOptions = MakeReadonlyProperty<&FridgeMode::SupportedFridgeOptions>([this]() { return _supportedFridgeOptions; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFullFridgeModes = MakeReadonlyProperty<&FridgeMode::SupportedFullFridgeModes>([this]() { return _supportedFullFridgeModes; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFridgeModes = MakeReadonlyProperty<&FridgeMode::SupportedFridgeModes>([this]() { return _supportedFridgeModes; });
 
 		Result<void> setFridgeMode(const std::string& fridgeMode);
 		std::vector<std::string> commandNames() const override { return { "setFridgeMode" }; }

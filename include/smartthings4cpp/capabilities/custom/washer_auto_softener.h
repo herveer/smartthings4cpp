@@ -12,7 +12,7 @@ namespace custom {
 
 		WasherAutoSoftener(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherAutoSoftenerValue{ [this]() { return _washerAutoSoftenerValue; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherAutoSoftenerValue = MakeReadonlyProperty<&WasherAutoSoftener::WasherAutoSoftenerValue>([this]() { return _washerAutoSoftenerValue; });
 
 		Result<void> setWasherAutoSoftener(const std::string& washerAutoSoftener);
 		std::vector<std::string> commandNames() const override { return { "setWasherAutoSoftener" }; }

@@ -12,12 +12,12 @@ namespace samsungce {
 
 		WasherCycle(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> CycleType{ [this]() { return _cycleType; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedCycles{ [this]() { return _supportedCycles; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> AvailableCycleTypes{ [this]() { return _availableCycleTypes; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherCycleValue{ [this]() { return _washerCycleValue; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ReferenceTable{ [this]() { return _referenceTable; } };
-		ReactiveLitepp::ReadonlyProperty<int> SpecializedFunctionClassification{ [this]() { return _specializedFunctionClassification; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> CycleType = MakeReadonlyProperty<&WasherCycle::CycleType>([this]() { return _cycleType; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedCycles = MakeReadonlyProperty<&WasherCycle::SupportedCycles>([this]() { return _supportedCycles; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> AvailableCycleTypes = MakeReadonlyProperty<&WasherCycle::AvailableCycleTypes>([this]() { return _availableCycleTypes; });
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherCycleValue = MakeReadonlyProperty<&WasherCycle::WasherCycleValue>([this]() { return _washerCycleValue; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ReferenceTable = MakeReadonlyProperty<&WasherCycle::ReferenceTable>([this]() { return _referenceTable; });
+		ReactiveLitepp::ReadonlyProperty<int> SpecializedFunctionClassification = MakeReadonlyProperty<&WasherCycle::SpecializedFunctionClassification>([this]() { return _specializedFunctionClassification; });
 
 		Result<void> setWasherCycle(const std::string& washerCycle);
 		Result<void> setCycleType(const std::string& cycleType, const std::string& washerCycle);

@@ -12,9 +12,9 @@ namespace samsungce {
 
 		DishwasherWashingCourse(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> CustomCourseCandidates{ [this]() { return _customCourseCandidates; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> WashingCourse{ [this]() { return _washingCourse; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedCourses{ [this]() { return _supportedCourses; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> CustomCourseCandidates = MakeReadonlyProperty<&DishwasherWashingCourse::CustomCourseCandidates>([this]() { return _customCourseCandidates; });
+		ReactiveLitepp::ReadonlyProperty<std::string> WashingCourse = MakeReadonlyProperty<&DishwasherWashingCourse::WashingCourse>([this]() { return _washingCourse; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedCourses = MakeReadonlyProperty<&DishwasherWashingCourse::SupportedCourses>([this]() { return _supportedCourses; });
 
 		Result<void> setWashingCourse(const std::string& course);
 		Result<void> setCustomCourse(const std::string& course);

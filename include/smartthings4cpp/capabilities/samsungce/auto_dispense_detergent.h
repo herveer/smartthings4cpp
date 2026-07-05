@@ -12,15 +12,15 @@ namespace samsungce {
 
 		AutoDispenseDetergent(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> RemainingAmount{ [this]() { return _remainingAmount; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Amount{ [this]() { return _amount; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedDensity{ [this]() { return _supportedDensity; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Density{ [this]() { return _density; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedAmount{ [this]() { return _supportedAmount; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> AvailableTypes{ [this]() { return _availableTypes; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Type{ [this]() { return _type; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedTypes{ [this]() { return _supportedTypes; } };
-		ReactiveLitepp::ReadonlyProperty<int> RecommendedAmount{ [this]() { return _recommendedAmount; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> RemainingAmount = MakeReadonlyProperty<&AutoDispenseDetergent::RemainingAmount>([this]() { return _remainingAmount; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Amount = MakeReadonlyProperty<&AutoDispenseDetergent::Amount>([this]() { return _amount; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedDensity = MakeReadonlyProperty<&AutoDispenseDetergent::SupportedDensity>([this]() { return _supportedDensity; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Density = MakeReadonlyProperty<&AutoDispenseDetergent::Density>([this]() { return _density; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedAmount = MakeReadonlyProperty<&AutoDispenseDetergent::SupportedAmount>([this]() { return _supportedAmount; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> AvailableTypes = MakeReadonlyProperty<&AutoDispenseDetergent::AvailableTypes>([this]() { return _availableTypes; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Type = MakeReadonlyProperty<&AutoDispenseDetergent::Type>([this]() { return _type; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedTypes = MakeReadonlyProperty<&AutoDispenseDetergent::SupportedTypes>([this]() { return _supportedTypes; });
+		ReactiveLitepp::ReadonlyProperty<int> RecommendedAmount = MakeReadonlyProperty<&AutoDispenseDetergent::RecommendedAmount>([this]() { return _recommendedAmount; });
 
 		Result<void> unsetRecommendedAmount();
 		Result<void> setRecommendedAmount(const std::string& type, int amountPerDose);

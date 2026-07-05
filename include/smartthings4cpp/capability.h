@@ -47,19 +47,13 @@ namespace smartthings4cpp {
 		Capability& operator=(Capability&&) = delete;
 
 		/** @brief Capability identifier, e.g. "switch" (reactive, read-only) */
-		ReadonlyProperty<std::string> Id{
-			[this]() { return _capabilityId; }
-		};
+		ReadonlyProperty<std::string> Id = MakeReadonlyProperty<&Capability::Id>([this]() { return _capabilityId; });
 
 		/** @brief Capability version (reactive, read-only) */
-		ReadonlyProperty<int> Version{
-			[this]() { return _version; }
-		};
+		ReadonlyProperty<int> Version = MakeReadonlyProperty<&Capability::Version>([this]() { return _version; });
 
 		/** @brief Identifier of the component this capability belongs to (reactive, read-only) */
-		ReadonlyProperty<std::string> ComponentId{
-			[this]() { return _componentId; }
-		};
+		ReadonlyProperty<std::string> ComponentId = MakeReadonlyProperty<&Capability::ComponentId>([this]() { return _componentId; });
 
 		/** @brief Plain accessor for the capability id (used for lookups) */
 		const std::string& capabilityId() const { return _capabilityId; }

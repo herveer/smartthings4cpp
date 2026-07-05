@@ -12,7 +12,7 @@ namespace standard {
 
 		MultipleZonePresence(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ZoneState{ [this]() { return _zoneState; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ZoneState = MakeReadonlyProperty<&MultipleZonePresence::ZoneState>([this]() { return _zoneState; });
 
 		Result<void> deleteZone(const std::string& id);
 		Result<void> createZone(const std::string& name, const std::string& id);

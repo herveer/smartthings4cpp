@@ -12,7 +12,7 @@ namespace custom {
 
 		DishwasherOperatingPercentage(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> DishwasherOperatingPercentageValue{ [this]() { return _dishwasherOperatingPercentageValue; } };
+		ReactiveLitepp::ReadonlyProperty<int> DishwasherOperatingPercentageValue = MakeReadonlyProperty<&DishwasherOperatingPercentage::DishwasherOperatingPercentageValue>([this]() { return _dishwasherOperatingPercentageValue; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

@@ -12,7 +12,7 @@ namespace samsungce {
 
 		KidsLock(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> LockState{ [this]() { return _lockState; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> LockState = MakeReadonlyProperty<&KidsLock::LockState>([this]() { return _lockState; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

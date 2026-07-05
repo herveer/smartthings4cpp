@@ -12,8 +12,8 @@ namespace samsungvd {
 
 		SoundFrom(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> Mode{ [this]() { return _mode; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> DetailName{ [this]() { return _detailName; } };
+		ReactiveLitepp::ReadonlyProperty<int> Mode = MakeReadonlyProperty<&SoundFrom::Mode>([this]() { return _mode; });
+		ReactiveLitepp::ReadonlyProperty<std::string> DetailName = MakeReadonlyProperty<&SoundFrom::DetailName>([this]() { return _detailName; });
 
 		Result<void> setSoundFrom(int mode, const std::string& detailName);
 		std::vector<std::string> commandNames() const override { return { "setSoundFrom" }; }

@@ -12,7 +12,7 @@ namespace standard {
 
 		AudioVolume(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> Volume{ [this]() { return _volume; } };
+		ReactiveLitepp::ReadonlyProperty<int> Volume = MakeReadonlyProperty<&AudioVolume::Volume>([this]() { return _volume; });
 
 		Result<void> volumeDown();
 		Result<void> volumeUp();

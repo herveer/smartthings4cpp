@@ -12,7 +12,7 @@ namespace custom {
 
 		DishwasherDelayStartTime(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> DishwasherDelayStartTimeValue{ [this]() { return _dishwasherDelayStartTimeValue; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> DishwasherDelayStartTimeValue = MakeReadonlyProperty<&DishwasherDelayStartTime::DishwasherDelayStartTimeValue>([this]() { return _dishwasherDelayStartTimeValue; });
 
 		Result<void> setDishwasherDelayStartTime(const std::string& dishwasherDelayStartTime);
 		std::vector<std::string> commandNames() const override { return { "setDishwasherDelayStartTime" }; }

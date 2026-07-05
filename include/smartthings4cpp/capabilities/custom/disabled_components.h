@@ -12,7 +12,7 @@ namespace custom {
 
 		DisabledComponents(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> DisabledComponentsValue{ [this]() { return _disabledComponentsValue; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> DisabledComponentsValue = MakeReadonlyProperty<&DisabledComponents::DisabledComponentsValue>([this]() { return _disabledComponentsValue; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

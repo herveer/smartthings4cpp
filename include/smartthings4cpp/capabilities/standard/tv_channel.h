@@ -12,8 +12,8 @@ namespace standard {
 
 		TvChannel(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> TvChannelValue{ [this]() { return _tvChannelValue; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> TvChannelName{ [this]() { return _tvChannelName; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> TvChannelValue = MakeReadonlyProperty<&TvChannel::TvChannelValue>([this]() { return _tvChannelValue; });
+		ReactiveLitepp::ReadonlyProperty<std::string> TvChannelName = MakeReadonlyProperty<&TvChannel::TvChannelName>([this]() { return _tvChannelName; });
 
 		Result<void> channelDown();
 		Result<void> setTvChannel(const std::string& tvChannel);

@@ -12,7 +12,7 @@ namespace standard {
 
 		PowerConsumptionReport(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> PowerConsumption{ [this]() { return _powerConsumption; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> PowerConsumption = MakeReadonlyProperty<&PowerConsumptionReport::PowerConsumption>([this]() { return _powerConsumption; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

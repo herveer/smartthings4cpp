@@ -12,10 +12,10 @@ namespace samsungce {
 
 		SoftenerState(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<double> RemainingAmount{ [this]() { return _remainingAmount; } };
-		ReactiveLitepp::ReadonlyProperty<double> Dosage{ [this]() { return _dosage; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> SoftenerType{ [this]() { return _softenerType; } };
-		ReactiveLitepp::ReadonlyProperty<double> InitialAmount{ [this]() { return _initialAmount; } };
+		ReactiveLitepp::ReadonlyProperty<double> RemainingAmount = MakeReadonlyProperty<&SoftenerState::RemainingAmount>([this]() { return _remainingAmount; });
+		ReactiveLitepp::ReadonlyProperty<double> Dosage = MakeReadonlyProperty<&SoftenerState::Dosage>([this]() { return _dosage; });
+		ReactiveLitepp::ReadonlyProperty<std::string> SoftenerType = MakeReadonlyProperty<&SoftenerState::SoftenerType>([this]() { return _softenerType; });
+		ReactiveLitepp::ReadonlyProperty<double> InitialAmount = MakeReadonlyProperty<&SoftenerState::InitialAmount>([this]() { return _initialAmount; });
 
 		Result<void> setInitialAmount(double amount);
 		Result<void> setRemainingAmount(double amount);

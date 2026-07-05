@@ -12,8 +12,8 @@ namespace standard {
 
 		ColorTemperature(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ColorTemperatureRange{ [this]() { return _colorTemperatureRange; } };
-		ReactiveLitepp::ReadonlyProperty<int> ColorTemperatureValue{ [this]() { return _colorTemperatureValue; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ColorTemperatureRange = MakeReadonlyProperty<&ColorTemperature::ColorTemperatureRange>([this]() { return _colorTemperatureRange; });
+		ReactiveLitepp::ReadonlyProperty<int> ColorTemperatureValue = MakeReadonlyProperty<&ColorTemperature::ColorTemperatureValue>([this]() { return _colorTemperatureValue; });
 
 		Result<void> setColorTemperature(int temperature);
 		std::vector<std::string> commandNames() const override { return { "setColorTemperature" }; }

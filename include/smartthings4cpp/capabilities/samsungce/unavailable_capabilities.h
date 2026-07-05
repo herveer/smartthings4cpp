@@ -12,7 +12,7 @@ namespace samsungce {
 
 		UnavailableCapabilities(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> UnavailableCommands{ [this]() { return _unavailableCommands; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> UnavailableCommands = MakeReadonlyProperty<&UnavailableCapabilities::UnavailableCommands>([this]() { return _unavailableCommands; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

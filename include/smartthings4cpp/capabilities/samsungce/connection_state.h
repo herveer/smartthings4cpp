@@ -12,7 +12,7 @@ namespace samsungce {
 
 		ConnectionState(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> ConnectionStateValue{ [this]() { return _connectionStateValue; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> ConnectionStateValue = MakeReadonlyProperty<&ConnectionState::ConnectionStateValue>([this]() { return _connectionStateValue; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

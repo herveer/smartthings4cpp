@@ -12,7 +12,7 @@ namespace samsungce {
 
 		FridgeVacationMode(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> VacationMode{ [this]() { return _vacationMode; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> VacationMode = MakeReadonlyProperty<&FridgeVacationMode::VacationMode>([this]() { return _vacationMode; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

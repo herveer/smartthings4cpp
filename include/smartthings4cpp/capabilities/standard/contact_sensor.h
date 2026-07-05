@@ -12,7 +12,7 @@ namespace standard {
 
 		ContactSensor(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> Contact{ [this]() { return _contact; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> Contact = MakeReadonlyProperty<&ContactSensor::Contact>([this]() { return _contact; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

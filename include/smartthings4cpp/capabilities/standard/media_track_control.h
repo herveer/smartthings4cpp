@@ -12,7 +12,7 @@ namespace standard {
 
 		MediaTrackControl(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedTrackControlCommands{ [this]() { return _supportedTrackControlCommands; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedTrackControlCommands = MakeReadonlyProperty<&MediaTrackControl::SupportedTrackControlCommands>([this]() { return _supportedTrackControlCommands; });
 
 		Result<void> previousTrack();
 		Result<void> nextTrack();

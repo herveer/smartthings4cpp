@@ -12,7 +12,7 @@ namespace samsungce {
 
 		WasherFreezePrevent(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> OperatingState{ [this]() { return _operatingState; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> OperatingState = MakeReadonlyProperty<&WasherFreezePrevent::OperatingState>([this]() { return _operatingState; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

@@ -12,11 +12,11 @@ namespace samsungce {
 
 		FoodDefrost(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedOptions{ [this]() { return _supportedOptions; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> FoodType{ [this]() { return _foodType; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Weight{ [this]() { return _weight; } };
-		ReactiveLitepp::ReadonlyProperty<int> OperationTime{ [this]() { return _operationTime; } };
-		ReactiveLitepp::ReadonlyProperty<int> RemainingTime{ [this]() { return _remainingTime; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedOptions = MakeReadonlyProperty<&FoodDefrost::SupportedOptions>([this]() { return _supportedOptions; });
+		ReactiveLitepp::ReadonlyProperty<std::string> FoodType = MakeReadonlyProperty<&FoodDefrost::FoodType>([this]() { return _foodType; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Weight = MakeReadonlyProperty<&FoodDefrost::Weight>([this]() { return _weight; });
+		ReactiveLitepp::ReadonlyProperty<int> OperationTime = MakeReadonlyProperty<&FoodDefrost::OperationTime>([this]() { return _operationTime; });
+		ReactiveLitepp::ReadonlyProperty<int> RemainingTime = MakeReadonlyProperty<&FoodDefrost::RemainingTime>([this]() { return _remainingTime; });
 
 		Result<void> setDefrost(const std::string& foodType, const nlohmann::json& weight);
 		std::vector<std::string> commandNames() const override { return { "setDefrost" }; }

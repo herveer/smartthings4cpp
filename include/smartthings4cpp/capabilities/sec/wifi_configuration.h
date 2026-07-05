@@ -12,11 +12,11 @@ namespace sec {
 
 		WifiConfiguration(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<bool> AutoReconnection{ [this]() { return _autoReconnection; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> MinVersion{ [this]() { return _minVersion; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWiFiFreq{ [this]() { return _supportedWiFiFreq; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedAuthType{ [this]() { return _supportedAuthType; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> ProtocolType{ [this]() { return _protocolType; } };
+		ReactiveLitepp::ReadonlyProperty<bool> AutoReconnection = MakeReadonlyProperty<&WifiConfiguration::AutoReconnection>([this]() { return _autoReconnection; });
+		ReactiveLitepp::ReadonlyProperty<std::string> MinVersion = MakeReadonlyProperty<&WifiConfiguration::MinVersion>([this]() { return _minVersion; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWiFiFreq = MakeReadonlyProperty<&WifiConfiguration::SupportedWiFiFreq>([this]() { return _supportedWiFiFreq; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedAuthType = MakeReadonlyProperty<&WifiConfiguration::SupportedAuthType>([this]() { return _supportedAuthType; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> ProtocolType = MakeReadonlyProperty<&WifiConfiguration::ProtocolType>([this]() { return _protocolType; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

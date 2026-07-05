@@ -12,7 +12,7 @@ namespace samsungvd {
 
 		FirmwareVersion(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> FirmwareVersionValue{ [this]() { return _firmwareVersionValue; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> FirmwareVersionValue = MakeReadonlyProperty<&FirmwareVersion::FirmwareVersionValue>([this]() { return _firmwareVersionValue; });
 
 		Result<void> setFirmwareVersion(const std::string& version);
 		std::vector<std::string> commandNames() const override { return { "setFirmwareVersion" }; }

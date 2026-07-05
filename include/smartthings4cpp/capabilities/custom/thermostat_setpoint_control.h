@@ -12,8 +12,8 @@ namespace custom {
 
 		ThermostatSetpointControl(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<double> MinimumSetpoint{ [this]() { return _minimumSetpoint; } };
-		ReactiveLitepp::ReadonlyProperty<double> MaximumSetpoint{ [this]() { return _maximumSetpoint; } };
+		ReactiveLitepp::ReadonlyProperty<double> MinimumSetpoint = MakeReadonlyProperty<&ThermostatSetpointControl::MinimumSetpoint>([this]() { return _minimumSetpoint; });
+		ReactiveLitepp::ReadonlyProperty<double> MaximumSetpoint = MakeReadonlyProperty<&ThermostatSetpointControl::MaximumSetpoint>([this]() { return _maximumSetpoint; });
 
 		Result<void> raiseSetpoint();
 		Result<void> lowerSetpoint();

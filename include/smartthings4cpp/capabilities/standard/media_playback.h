@@ -12,8 +12,8 @@ namespace standard {
 
 		MediaPlayback(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedPlaybackCommands{ [this]() { return _supportedPlaybackCommands; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> PlaybackStatus{ [this]() { return _playbackStatus; } };
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedPlaybackCommands = MakeReadonlyProperty<&MediaPlayback::SupportedPlaybackCommands>([this]() { return _supportedPlaybackCommands; });
+		ReactiveLitepp::ReadonlyProperty<std::string> PlaybackStatus = MakeReadonlyProperty<&MediaPlayback::PlaybackStatus>([this]() { return _playbackStatus; });
 
 		Result<void> play();
 		Result<void> stop();

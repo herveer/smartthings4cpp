@@ -12,12 +12,12 @@ namespace custom {
 
 		DustFilter(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> DustFilterUsageStep{ [this]() { return _dustFilterUsageStep; } };
-		ReactiveLitepp::ReadonlyProperty<int> DustFilterUsage{ [this]() { return _dustFilterUsage; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> DustFilterLastResetDate{ [this]() { return _dustFilterLastResetDate; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> DustFilterStatus{ [this]() { return _dustFilterStatus; } };
-		ReactiveLitepp::ReadonlyProperty<int> DustFilterCapacity{ [this]() { return _dustFilterCapacity; } };
-		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> DustFilterResetType{ [this]() { return _dustFilterResetType; } };
+		ReactiveLitepp::ReadonlyProperty<int> DustFilterUsageStep = MakeReadonlyProperty<&DustFilter::DustFilterUsageStep>([this]() { return _dustFilterUsageStep; });
+		ReactiveLitepp::ReadonlyProperty<int> DustFilterUsage = MakeReadonlyProperty<&DustFilter::DustFilterUsage>([this]() { return _dustFilterUsage; });
+		ReactiveLitepp::ReadonlyProperty<std::string> DustFilterLastResetDate = MakeReadonlyProperty<&DustFilter::DustFilterLastResetDate>([this]() { return _dustFilterLastResetDate; });
+		ReactiveLitepp::ReadonlyProperty<std::string> DustFilterStatus = MakeReadonlyProperty<&DustFilter::DustFilterStatus>([this]() { return _dustFilterStatus; });
+		ReactiveLitepp::ReadonlyProperty<int> DustFilterCapacity = MakeReadonlyProperty<&DustFilter::DustFilterCapacity>([this]() { return _dustFilterCapacity; });
+		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> DustFilterResetType = MakeReadonlyProperty<&DustFilter::DustFilterResetType>([this]() { return _dustFilterResetType; });
 
 		Result<void> resetDustFilter();
 		std::vector<std::string> commandNames() const override { return { "resetDustFilter" }; }

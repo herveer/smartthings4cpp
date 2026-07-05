@@ -12,8 +12,8 @@ namespace samsungce {
 
 		SoftwareVersion(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Versions{ [this]() { return _versions; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> PlatformVersion{ [this]() { return _platformVersion; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Versions = MakeReadonlyProperty<&SoftwareVersion::Versions>([this]() { return _versions; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> PlatformVersion = MakeReadonlyProperty<&SoftwareVersion::PlatformVersion>([this]() { return _platformVersion; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

@@ -12,8 +12,8 @@ namespace samsungvd {
 
 		ThingStatus(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> UpdatedTime{ [this]() { return _updatedTime; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> Status{ [this]() { return _status; } };
+		ReactiveLitepp::ReadonlyProperty<int> UpdatedTime = MakeReadonlyProperty<&ThingStatus::UpdatedTime>([this]() { return _updatedTime; });
+		ReactiveLitepp::ReadonlyProperty<std::string> Status = MakeReadonlyProperty<&ThingStatus::Status>([this]() { return _status; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;

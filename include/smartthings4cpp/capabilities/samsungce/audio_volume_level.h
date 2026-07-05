@@ -12,8 +12,8 @@ namespace samsungce {
 
 		AudioVolumeLevel(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> VolumeLevel{ [this]() { return _volumeLevel; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> VolumeLevelRange{ [this]() { return _volumeLevelRange; } };
+		ReactiveLitepp::ReadonlyProperty<int> VolumeLevel = MakeReadonlyProperty<&AudioVolumeLevel::VolumeLevel>([this]() { return _volumeLevel; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> VolumeLevelRange = MakeReadonlyProperty<&AudioVolumeLevel::VolumeLevelRange>([this]() { return _volumeLevelRange; });
 
 		Result<void> volumeDown();
 		Result<void> volumeUp();

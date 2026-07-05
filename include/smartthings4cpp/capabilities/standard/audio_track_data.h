@@ -12,9 +12,9 @@ namespace standard {
 
 		AudioTrackData(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<int> TotalTime{ [this]() { return _totalTime; } };
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> AudioTrackDataValue{ [this]() { return _audioTrackDataValue; } };
-		ReactiveLitepp::ReadonlyProperty<int> ElapsedTime{ [this]() { return _elapsedTime; } };
+		ReactiveLitepp::ReadonlyProperty<int> TotalTime = MakeReadonlyProperty<&AudioTrackData::TotalTime>([this]() { return _totalTime; });
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> AudioTrackDataValue = MakeReadonlyProperty<&AudioTrackData::AudioTrackDataValue>([this]() { return _audioTrackDataValue; });
+		ReactiveLitepp::ReadonlyProperty<int> ElapsedTime = MakeReadonlyProperty<&AudioTrackData::ElapsedTime>([this]() { return _elapsedTime; });
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;
