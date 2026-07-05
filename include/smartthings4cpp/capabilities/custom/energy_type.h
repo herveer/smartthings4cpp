@@ -12,7 +12,7 @@ namespace custom {
 
 		EnergyType(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> EnergyTypeValue{ [this]() { return _energyType; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> EnergyTypeValue{ [this]() { return _energyTypeValue; } };
 		ReactiveLitepp::ReadonlyProperty<bool> EnergySavingSupport{ [this]() { return _energySavingSupport; } };
 		ReactiveLitepp::ReadonlyProperty<int> DrMaxDuration{ [this]() { return _drMaxDuration; } };
 		ReactiveLitepp::ReadonlyProperty<int> EnergySavingLevel{ [this]() { return _energySavingLevel; } };
@@ -29,7 +29,7 @@ namespace custom {
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		std::string _energyType;
+		std::string _energyTypeValue;
 		bool _energySavingSupport = false;
 		int _drMaxDuration = 0;
 		int _energySavingLevel = 0;

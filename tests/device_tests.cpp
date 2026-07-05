@@ -6,6 +6,7 @@
 #include "smartthings4cpp/json_utils.h"
 
 using namespace smartthings4cpp;
+using namespace smartthings4cpp::standard; // typed standard capabilities (Switch, SwitchLevel, ...)
 
 namespace {
 

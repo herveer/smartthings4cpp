@@ -12,13 +12,13 @@ namespace samsungvd {
 
 		DeviceCategory(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> CategoryAttr{ [this]() { return _category; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> CategoryAttr{ [this]() { return _categoryAttr; } };
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		std::string _category;
+		std::string _categoryAttr;
 	};
 
 } // namespace samsungvd

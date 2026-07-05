@@ -67,7 +67,7 @@ namespace custom {
 	}
 
 	void DisabledCapabilities::parseStatus(const nlohmann::json&) {
-		{ auto v = attributeStringArray("disabledCapabilities"); if (!v.empty()) SetPropertyValueAndNotify<&DisabledCapabilities::DisabledCapabilitiesValue>(_disabledCapabilities, v); }
+		{ auto v = attributeStringArray("disabledCapabilities"); if (!v.empty()) SetPropertyValueAndNotify<&DisabledCapabilities::DisabledCapabilitiesValue>(_disabledCapabilitiesValue, v); }
 	}
 
 	DisabledComponents::DisabledComponents(int version, std::string componentId, std::string deviceId, Client* client)
@@ -75,7 +75,7 @@ namespace custom {
 	}
 
 	void DisabledComponents::parseStatus(const nlohmann::json&) {
-		{ auto v = attributeStringArray("disabledComponents"); if (!v.empty()) SetPropertyValueAndNotify<&DisabledComponents::DisabledComponentsValue>(_disabledComponents, v); }
+		{ auto v = attributeStringArray("disabledComponents"); if (!v.empty()) SetPropertyValueAndNotify<&DisabledComponents::DisabledComponentsValue>(_disabledComponentsValue, v); }
 	}
 
 	DishwasherDelayStartTime::DishwasherDelayStartTime(int version, std::string componentId, std::string deviceId, Client* client)
@@ -83,7 +83,7 @@ namespace custom {
 	}
 
 	void DishwasherDelayStartTime::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&DishwasherDelayStartTime::DishwasherDelayStartTimeValue>(_dishwasherDelayStartTime, attributeString("dishwasherDelayStartTime", _dishwasherDelayStartTime));
+		SetPropertyValueAndNotify<&DishwasherDelayStartTime::DishwasherDelayStartTimeValue>(_dishwasherDelayStartTimeValue, attributeString("dishwasherDelayStartTime", _dishwasherDelayStartTimeValue));
 	}
 
 	Result<void> DishwasherDelayStartTime::setDishwasherDelayStartTime(const std::string& dishwasherDelayStartTime) {
@@ -97,7 +97,7 @@ namespace custom {
 	}
 
 	void DishwasherOperatingPercentage::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&DishwasherOperatingPercentage::DishwasherOperatingPercentageValue>(_dishwasherOperatingPercentage, static_cast<int>(attributeNumber("dishwasherOperatingPercentage", _dishwasherOperatingPercentage)));
+		SetPropertyValueAndNotify<&DishwasherOperatingPercentage::DishwasherOperatingPercentageValue>(_dishwasherOperatingPercentageValue, static_cast<int>(attributeNumber("dishwasherOperatingPercentage", _dishwasherOperatingPercentageValue)));
 	}
 
 	DishwasherOperatingProgress::DishwasherOperatingProgress(int version, std::string componentId, std::string deviceId, Client* client)
@@ -105,7 +105,7 @@ namespace custom {
 	}
 
 	void DishwasherOperatingProgress::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&DishwasherOperatingProgress::DishwasherOperatingProgressValue>(_dishwasherOperatingProgress, attributeString("dishwasherOperatingProgress", _dishwasherOperatingProgress));
+		SetPropertyValueAndNotify<&DishwasherOperatingProgress::DishwasherOperatingProgressValue>(_dishwasherOperatingProgressValue, attributeString("dishwasherOperatingProgress", _dishwasherOperatingProgressValue));
 	}
 
 	DryerDryLevel::DryerDryLevel(int version, std::string componentId, std::string deviceId, Client* client)
@@ -113,7 +113,7 @@ namespace custom {
 	}
 
 	void DryerDryLevel::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&DryerDryLevel::DryerDryLevelValue>(_dryerDryLevel, attributeString("dryerDryLevel", _dryerDryLevel));
+		SetPropertyValueAndNotify<&DryerDryLevel::DryerDryLevelValue>(_dryerDryLevelValue, attributeString("dryerDryLevel", _dryerDryLevelValue));
 		{ auto v = attributeStringArray("supportedDryerDryLevel"); if (!v.empty()) SetPropertyValueAndNotify<&DryerDryLevel::SupportedDryerDryLevel>(_supportedDryerDryLevel, v); }
 	}
 
@@ -145,7 +145,7 @@ namespace custom {
 	}
 
 	void EnergyType::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&EnergyType::EnergyTypeValue>(_energyType, attributeString("energyType", _energyType));
+		SetPropertyValueAndNotify<&EnergyType::EnergyTypeValue>(_energyTypeValue, attributeString("energyType", _energyTypeValue));
 		SetPropertyValueAndNotify<&EnergyType::EnergySavingSupport>(_energySavingSupport, attributeBool("energySavingSupport", _energySavingSupport));
 		SetPropertyValueAndNotify<&EnergyType::DrMaxDuration>(_drMaxDuration, static_cast<int>(attributeNumber("drMaxDuration", _drMaxDuration)));
 		SetPropertyValueAndNotify<&EnergyType::EnergySavingLevel>(_energySavingLevel, static_cast<int>(attributeNumber("energySavingLevel", _energySavingLevel)));
@@ -167,7 +167,7 @@ namespace custom {
 	}
 
 	void Error::parseStatus(const nlohmann::json&) {
-		{ auto v = attributeValue("error"); if (!v.is_null()) SetPropertyValueAndNotify<&Error::ErrorValue>(_error, v); }
+		{ auto v = attributeValue("error"); if (!v.is_null()) SetPropertyValueAndNotify<&Error::ErrorValue>(_errorValue, v); }
 	}
 
 	Result<void> Error::setError(const nlohmann::json& error) {
@@ -182,7 +182,7 @@ namespace custom {
 
 	void FridgeMode::parseStatus(const nlohmann::json&) {
 		SetPropertyValueAndNotify<&FridgeMode::FridgeModeValue>(_fridgeModeValue, attributeString("fridgeModeValue", _fridgeModeValue));
-		SetPropertyValueAndNotify<&FridgeMode::FridgeModeValue_>(_fridgeMode, attributeString("fridgeMode", _fridgeMode));
+		SetPropertyValueAndNotify<&FridgeMode::FridgeModeValue_>(_fridgeModeValue_, attributeString("fridgeMode", _fridgeModeValue_));
 		{ auto v = attributeStringArray("supportedFridgeOptions"); if (!v.empty()) SetPropertyValueAndNotify<&FridgeMode::SupportedFridgeOptions>(_supportedFridgeOptions, v); }
 		{ auto v = attributeStringArray("supportedFullFridgeModes"); if (!v.empty()) SetPropertyValueAndNotify<&FridgeMode::SupportedFullFridgeModes>(_supportedFullFridgeModes, v); }
 		{ auto v = attributeStringArray("supportedFridgeModes"); if (!v.empty()) SetPropertyValueAndNotify<&FridgeMode::SupportedFridgeModes>(_supportedFridgeModes, v); }
@@ -199,14 +199,14 @@ namespace custom {
 	}
 
 	void JobBeginningStatus::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&JobBeginningStatus::JobBeginningStatusValue>(_jobBeginningStatus, attributeString("jobBeginningStatus", _jobBeginningStatus));
+		SetPropertyValueAndNotify<&JobBeginningStatus::JobBeginningStatusValue>(_jobBeginningStatusValue, attributeString("jobBeginningStatus", _jobBeginningStatusValue));
 	}
 
 	Launchapp::Launchapp(int version, std::string componentId, std::string deviceId, Client* client)
 		: Capability("custom.launchapp", version, std::move(componentId), std::move(deviceId), client) {
 	}
 
-	Result<void> Launchapp::launchAppCommand(const std::string& appId, const std::string& appName) {
+	Result<void> Launchapp::launchApp(const std::string& appId, const std::string& appName) {
 		nlohmann::json commandArgs = nlohmann::json::array();
 		commandArgs.push_back(appId);
 		commandArgs.push_back(appName);
@@ -218,7 +218,7 @@ namespace custom {
 	}
 
 	void Picturemode::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&Picturemode::PictureModeValue>(_pictureMode, attributeString("pictureMode", _pictureMode));
+		SetPropertyValueAndNotify<&Picturemode::PictureModeValue>(_pictureModeValue, attributeString("pictureMode", _pictureModeValue));
 		{ auto v = attributeValue("supportedPictureModes"); if (!v.is_null()) SetPropertyValueAndNotify<&Picturemode::SupportedPictureModes>(_supportedPictureModes, v); }
 		{ auto v = attributeValue("supportedPictureModesMap"); if (!v.is_null()) SetPropertyValueAndNotify<&Picturemode::SupportedPictureModesMap>(_supportedPictureModesMap, v); }
 	}
@@ -247,7 +247,7 @@ namespace custom {
 
 	void Soundmode::parseStatus(const nlohmann::json&) {
 		{ auto v = attributeValue("supportedSoundModesMap"); if (!v.is_null()) SetPropertyValueAndNotify<&Soundmode::SupportedSoundModesMap>(_supportedSoundModesMap, v); }
-		SetPropertyValueAndNotify<&Soundmode::SoundModeValue>(_soundMode, attributeString("soundMode", _soundMode));
+		SetPropertyValueAndNotify<&Soundmode::SoundModeValue>(_soundModeValue, attributeString("soundMode", _soundModeValue));
 		{ auto v = attributeStringArray("supportedSoundModes"); if (!v.empty()) SetPropertyValueAndNotify<&Soundmode::SupportedSoundModes>(_supportedSoundModes, v); }
 	}
 
@@ -306,7 +306,7 @@ namespace custom {
 	}
 
 	void WasherAutoDetergent::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&WasherAutoDetergent::WasherAutoDetergentValue>(_washerAutoDetergent, attributeString("washerAutoDetergent", _washerAutoDetergent));
+		SetPropertyValueAndNotify<&WasherAutoDetergent::WasherAutoDetergentValue>(_washerAutoDetergentValue, attributeString("washerAutoDetergent", _washerAutoDetergentValue));
 	}
 
 	Result<void> WasherAutoDetergent::setWasherAutoDetergent(const std::string& washerAutoDetergent) {
@@ -320,7 +320,7 @@ namespace custom {
 	}
 
 	void WasherAutoSoftener::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&WasherAutoSoftener::WasherAutoSoftenerValue>(_washerAutoSoftener, attributeString("washerAutoSoftener", _washerAutoSoftener));
+		SetPropertyValueAndNotify<&WasherAutoSoftener::WasherAutoSoftenerValue>(_washerAutoSoftenerValue, attributeString("washerAutoSoftener", _washerAutoSoftenerValue));
 	}
 
 	Result<void> WasherAutoSoftener::setWasherAutoSoftener(const std::string& washerAutoSoftener) {
@@ -335,7 +335,7 @@ namespace custom {
 
 	void WasherRinseCycles::parseStatus(const nlohmann::json&) {
 		{ auto v = attributeStringArray("supportedWasherRinseCycles"); if (!v.empty()) SetPropertyValueAndNotify<&WasherRinseCycles::SupportedWasherRinseCycles>(_supportedWasherRinseCycles, v); }
-		SetPropertyValueAndNotify<&WasherRinseCycles::WasherRinseCyclesValue>(_washerRinseCycles, attributeString("washerRinseCycles", _washerRinseCycles));
+		SetPropertyValueAndNotify<&WasherRinseCycles::WasherRinseCyclesValue>(_washerRinseCyclesValue, attributeString("washerRinseCycles", _washerRinseCyclesValue));
 	}
 
 	Result<void> WasherRinseCycles::setWasherRinseCycles(const std::string& cycle) {
@@ -350,7 +350,7 @@ namespace custom {
 
 	void WasherSoilLevel::parseStatus(const nlohmann::json&) {
 		{ auto v = attributeStringArray("supportedWasherSoilLevel"); if (!v.empty()) SetPropertyValueAndNotify<&WasherSoilLevel::SupportedWasherSoilLevel>(_supportedWasherSoilLevel, v); }
-		SetPropertyValueAndNotify<&WasherSoilLevel::WasherSoilLevelValue>(_washerSoilLevel, attributeString("washerSoilLevel", _washerSoilLevel));
+		SetPropertyValueAndNotify<&WasherSoilLevel::WasherSoilLevelValue>(_washerSoilLevelValue, attributeString("washerSoilLevel", _washerSoilLevelValue));
 	}
 
 	Result<void> WasherSoilLevel::setWasherSoilLevel(const std::string& soilLevel) {
@@ -364,7 +364,7 @@ namespace custom {
 	}
 
 	void WasherSpinLevel::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&WasherSpinLevel::WasherSpinLevelValue>(_washerSpinLevel, attributeString("washerSpinLevel", _washerSpinLevel));
+		SetPropertyValueAndNotify<&WasherSpinLevel::WasherSpinLevelValue>(_washerSpinLevelValue, attributeString("washerSpinLevel", _washerSpinLevelValue));
 		{ auto v = attributeStringArray("supportedWasherSpinLevel"); if (!v.empty()) SetPropertyValueAndNotify<&WasherSpinLevel::SupportedWasherSpinLevel>(_supportedWasherSpinLevel, v); }
 	}
 
@@ -380,7 +380,7 @@ namespace custom {
 
 	void WasherWaterTemperature::parseStatus(const nlohmann::json&) {
 		{ auto v = attributeStringArray("supportedWasherWaterTemperature"); if (!v.empty()) SetPropertyValueAndNotify<&WasherWaterTemperature::SupportedWasherWaterTemperature>(_supportedWasherWaterTemperature, v); }
-		SetPropertyValueAndNotify<&WasherWaterTemperature::WasherWaterTemperatureValue>(_washerWaterTemperature, attributeString("washerWaterTemperature", _washerWaterTemperature));
+		SetPropertyValueAndNotify<&WasherWaterTemperature::WasherWaterTemperatureValue>(_washerWaterTemperatureValue, attributeString("washerWaterTemperature", _washerWaterTemperatureValue));
 	}
 
 	Result<void> WasherWaterTemperature::setWasherWaterTemperature(const std::string& temperature) {

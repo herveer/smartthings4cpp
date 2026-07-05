@@ -194,7 +194,7 @@ TEST_CASE("handleWebhook dispatches a device EVENT onto a registered Device", "[
 	REQUIRE(resp.messageType == WebhookMessageType::Event);
 	REQUIRE(deviceChanges > 0);
 
-	auto* sw = device->getCapability<Switch>();
+	auto* sw = device->getCapability<standard::Switch>();
 	REQUIRE(sw != nullptr);
 	REQUIRE(firedSender == sw);
 	// The new value flowed through the same reactive path a poll would take.

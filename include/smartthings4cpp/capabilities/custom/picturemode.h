@@ -12,7 +12,7 @@ namespace custom {
 
 		Picturemode(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> PictureModeValue{ [this]() { return _pictureMode; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> PictureModeValue{ [this]() { return _pictureModeValue; } };
 		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedPictureModes{ [this]() { return _supportedPictureModes; } };
 		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedPictureModesMap{ [this]() { return _supportedPictureModesMap; } };
 
@@ -23,7 +23,7 @@ namespace custom {
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		std::string _pictureMode;
+		std::string _pictureModeValue;
 		nlohmann::json _supportedPictureModes;
 		nlohmann::json _supportedPictureModesMap;
 	};

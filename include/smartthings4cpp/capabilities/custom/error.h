@@ -12,7 +12,7 @@ namespace custom {
 
 		Error(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ErrorValue{ [this]() { return _error; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ErrorValue{ [this]() { return _errorValue; } };
 
 		Result<void> setError(const nlohmann::json& error);
 		std::vector<std::string> commandNames() const override { return { "setError" }; }
@@ -21,7 +21,7 @@ namespace custom {
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		nlohmann::json _error;
+		nlohmann::json _errorValue;
 	};
 
 } // namespace custom

@@ -12,7 +12,7 @@ namespace samsungce {
 
 		AutoOpenDoor(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> AutoOpenDoorValue{ [this]() { return _autoOpenDoor; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> AutoOpenDoorValue{ [this]() { return _autoOpenDoorValue; } };
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedPressureLevels{ [this]() { return _supportedPressureLevels; } };
 		ReactiveLitepp::ReadonlyProperty<std::string> PressureLevel{ [this]() { return _pressureLevel; } };
 
@@ -25,7 +25,7 @@ namespace samsungce {
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		std::string _autoOpenDoor;
+		std::string _autoOpenDoorValue;
 		std::vector<std::string> _supportedPressureLevels;
 		std::string _pressureLevel;
 	};

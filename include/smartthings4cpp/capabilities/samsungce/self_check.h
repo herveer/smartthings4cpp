@@ -12,7 +12,7 @@ namespace samsungce {
 
 		SelfCheck(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> ResultAttr{ [this]() { return _result; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> ResultAttr{ [this]() { return _resultAttr; } };
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedActions{ [this]() { return _supportedActions; } };
 		ReactiveLitepp::ReadonlyProperty<int> Progress{ [this]() { return _progress; } };
 		ReactiveLitepp::ReadonlyProperty<nlohmann::json> Errors{ [this]() { return _errors; } };
@@ -26,7 +26,7 @@ namespace samsungce {
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		std::string _result;
+		std::string _resultAttr;
 		std::vector<std::string> _supportedActions;
 		int _progress = 0;
 		nlohmann::json _errors;

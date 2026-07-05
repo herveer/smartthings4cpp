@@ -7,7 +7,7 @@
   pairs (optionally filtered to the Samsung-proprietary prefixes), and downloads each
   capability definition from GET /v1/capabilities/{id}/{version} into -OutDir.
 
-  These JSON files are the input to generate_proprietary_capabilities.ps1.
+  These JSON files are the input to generate_capabilities.ps1.
 
 .PARAMETER Token
   A SmartThings Personal Access Token. If omitted, set $env:SMARTTHINGS_TOKEN.

@@ -234,6 +234,18 @@ namespace smartthings4cpp {
 		const std::string& componentId, const std::string& deviceId, Client* client);
 
 	/**
+	 * @brief Factory for the generated standard capabilities (non-proprietary)
+	 *
+	 * Returns a typed capability for standard ids (no vendor prefix) that don't have
+	 * a curated hand-written class registered directly in createCapability(), or
+	 * nullptr for any other id. Implemented in the generated
+	 * src/capabilities/standard_factory.cpp and consulted by createCapability()
+	 * after the hand-written classes and before createProprietaryCapability().
+	 */
+	std::unique_ptr<Capability> createStandardCapability(const std::string& id, int version,
+		const std::string& componentId, const std::string& deviceId, Client* client);
+
+	/**
 	 * @brief Factory for the Samsung-proprietary capabilities (generated)
 	 *
 	 * Returns a typed capability for proprietary ids (@c samsungce.*, @c samsungvd.*,

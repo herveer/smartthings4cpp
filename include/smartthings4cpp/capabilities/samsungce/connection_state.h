@@ -12,13 +12,13 @@ namespace samsungce {
 
 		ConnectionState(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> ConnectionStateValue{ [this]() { return _connectionState; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> ConnectionStateValue{ [this]() { return _connectionStateValue; } };
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		std::string _connectionState;
+		std::string _connectionStateValue;
 	};
 
 } // namespace samsungce

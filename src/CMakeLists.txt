@@ -10,34 +10,23 @@ set(SMARTTHINGS4CPP_SOURCES
     json_utils.cpp
     base64.cpp
     oauth2/oauth2_authenticator.cpp
-    capabilities/switch.cpp
-    capabilities/switch_level.cpp
-    capabilities/audio_volume.cpp
-    capabilities/audio_mute.cpp
-    capabilities/contact_sensor.cpp
-    capabilities/temperature_measurement.cpp
-    capabilities/thermostat_cooling_setpoint.cpp
-    capabilities/refresh.cpp
-    capabilities/media_playback.cpp
-    capabilities/media_track_control.cpp
-    capabilities/media_input_source.cpp
-    capabilities/tv_channel.cpp
-    capabilities/power_consumption_report.cpp
-    capabilities/remote_control_status.cpp
-    capabilities/demand_response_load_control.cpp
-    capabilities/washer_operating_state.cpp
-    capabilities/refrigeration.cpp
-    capabilities/execute.cpp
-    capabilities/ocf.cpp
+    # UnknownCapability is the null-object fallback returned by createCapability()
+    # for ids without a generated class; it is infrastructure, not a schema class.
     capabilities/unknown_capability.cpp
-    # Samsung-proprietary capabilities (generated; one TU per namespace prefix)
+    # Generated capabilities (standard + Samsung-proprietary): one TU per namespace
+    # group plus the two factories. This block is rewritten by
+    # tools/generate_capabilities.ps1 - do not edit the entries by hand.
+    # === BEGIN GENERATED CAPABILITY SOURCES (managed by tools/generate_capabilities.ps1) ===
+    capabilities/standard.cpp
     capabilities/samsungce.cpp
     capabilities/samsungvd.cpp
     capabilities/custom.cpp
     capabilities/sec.cpp
     capabilities/hca.cpp
     capabilities/samsungim.cpp
+    capabilities/standard_factory.cpp
     capabilities/proprietary_factory.cpp
+    # === END GENERATED CAPABILITY SOURCES ===
 )
 
 # Create the library

@@ -15,7 +15,7 @@ namespace samsungce {
 		ReactiveLitepp::ReadonlyProperty<std::string> CycleType{ [this]() { return _cycleType; } };
 		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedCycles{ [this]() { return _supportedCycles; } };
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> AvailableCycleTypes{ [this]() { return _availableCycleTypes; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherCycleValue{ [this]() { return _washerCycle; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherCycleValue{ [this]() { return _washerCycleValue; } };
 		ReactiveLitepp::ReadonlyProperty<nlohmann::json> ReferenceTable{ [this]() { return _referenceTable; } };
 		ReactiveLitepp::ReadonlyProperty<int> SpecializedFunctionClassification{ [this]() { return _specializedFunctionClassification; } };
 
@@ -30,7 +30,7 @@ namespace samsungce {
 		std::string _cycleType;
 		nlohmann::json _supportedCycles;
 		std::vector<std::string> _availableCycleTypes;
-		std::string _washerCycle;
+		std::string _washerCycleValue;
 		nlohmann::json _referenceTable;
 		int _specializedFunctionClassification = 0;
 	};

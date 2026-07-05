@@ -13,7 +13,7 @@ namespace custom {
 		WasherSoilLevel(int version, std::string componentId, std::string deviceId, Client* client);
 
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWasherSoilLevel{ [this]() { return _supportedWasherSoilLevel; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherSoilLevelValue{ [this]() { return _washerSoilLevel; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherSoilLevelValue{ [this]() { return _washerSoilLevelValue; } };
 
 		Result<void> setWasherSoilLevel(const std::string& soilLevel);
 		std::vector<std::string> commandNames() const override { return { "setWasherSoilLevel" }; }
@@ -23,7 +23,7 @@ namespace custom {
 
 	private:
 		std::vector<std::string> _supportedWasherSoilLevel;
-		std::string _washerSoilLevel;
+		std::string _washerSoilLevelValue;
 	};
 
 } // namespace custom

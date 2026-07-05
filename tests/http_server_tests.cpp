@@ -176,7 +176,7 @@ TEST_CASE("A webhook EVENT POSTed to the embedded server updates live Devices", 
 	REQUIRE(json_utils::parse(response.body).contains("eventData"));
 	REQUIRE(changes > 0);
 
-	auto* sw = device->getCapability<Switch>();
+	auto* sw = device->getCapability<standard::Switch>();
 	REQUIRE(sw != nullptr);
 	REQUIRE(firedSender == sw);
 	REQUIRE(sw->statusJson()["switch"]["value"] == "on");

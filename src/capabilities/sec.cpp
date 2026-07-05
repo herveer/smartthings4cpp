@@ -30,7 +30,7 @@ namespace sec {
 		SetPropertyValueAndNotify<&SmartthingsHub::Availability>(_availability, attributeString("availability", _availability));
 		SetPropertyValueAndNotify<&SmartthingsHub::DeviceId>(_deviceId, attributeString("deviceId", _deviceId));
 		SetPropertyValueAndNotify<&SmartthingsHub::ZigbeeHardwareAvailability>(_zigbeeHardwareAvailability, attributeString("zigbeeHardwareAvailability", _zigbeeHardwareAvailability));
-		SetPropertyValueAndNotify<&SmartthingsHub::VersionAttr>(_version, attributeString("version", _version));
+		SetPropertyValueAndNotify<&SmartthingsHub::VersionAttr>(_versionAttr, attributeString("version", _versionAttr));
 		SetPropertyValueAndNotify<&SmartthingsHub::ThreadRequiresExternalHardware>(_threadRequiresExternalHardware, attributeBool("threadRequiresExternalHardware", _threadRequiresExternalHardware));
 		SetPropertyValueAndNotify<&SmartthingsHub::ZigbeeRequiresExternalHardware>(_zigbeeRequiresExternalHardware, attributeBool("zigbeeRequiresExternalHardware", _zigbeeRequiresExternalHardware));
 		SetPropertyValueAndNotify<&SmartthingsHub::Eui>(_eui, attributeString("eui", _eui));

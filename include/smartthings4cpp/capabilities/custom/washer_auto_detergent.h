@@ -12,7 +12,7 @@ namespace custom {
 
 		WasherAutoDetergent(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherAutoDetergentValue{ [this]() { return _washerAutoDetergent; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherAutoDetergentValue{ [this]() { return _washerAutoDetergentValue; } };
 
 		Result<void> setWasherAutoDetergent(const std::string& washerAutoDetergent);
 		std::vector<std::string> commandNames() const override { return { "setWasherAutoDetergent" }; }
@@ -21,7 +21,7 @@ namespace custom {
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		std::string _washerAutoDetergent;
+		std::string _washerAutoDetergentValue;
 	};
 
 } // namespace custom

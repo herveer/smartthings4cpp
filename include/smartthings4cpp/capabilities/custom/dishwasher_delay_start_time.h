@@ -12,7 +12,7 @@ namespace custom {
 
 		DishwasherDelayStartTime(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> DishwasherDelayStartTimeValue{ [this]() { return _dishwasherDelayStartTime; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> DishwasherDelayStartTimeValue{ [this]() { return _dishwasherDelayStartTimeValue; } };
 
 		Result<void> setDishwasherDelayStartTime(const std::string& dishwasherDelayStartTime);
 		std::vector<std::string> commandNames() const override { return { "setDishwasherDelayStartTime" }; }
@@ -21,7 +21,7 @@ namespace custom {
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		std::string _dishwasherDelayStartTime;
+		std::string _dishwasherDelayStartTimeValue;
 	};
 
 } // namespace custom

@@ -174,7 +174,7 @@ namespace samsungce {
 	}
 
 	void AutoOpenDoor::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&AutoOpenDoor::AutoOpenDoorValue>(_autoOpenDoor, attributeString("autoOpenDoor", _autoOpenDoor));
+		SetPropertyValueAndNotify<&AutoOpenDoor::AutoOpenDoorValue>(_autoOpenDoorValue, attributeString("autoOpenDoor", _autoOpenDoorValue));
 		{ auto v = attributeStringArray("supportedPressureLevels"); if (!v.empty()) SetPropertyValueAndNotify<&AutoOpenDoor::SupportedPressureLevels>(_supportedPressureLevels, v); }
 		SetPropertyValueAndNotify<&AutoOpenDoor::PressureLevel>(_pressureLevel, attributeString("pressureLevel", _pressureLevel));
 	}
@@ -198,7 +198,7 @@ namespace samsungce {
 	}
 
 	void ConnectionState::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&ConnectionState::ConnectionStateValue>(_connectionState, attributeString("connectionState", _connectionState));
+		SetPropertyValueAndNotify<&ConnectionState::ConnectionStateValue>(_connectionStateValue, attributeString("connectionState", _connectionStateValue));
 	}
 
 	DetergentAutoReplenishment::DetergentAutoReplenishment(int version, std::string componentId, std::string deviceId, Client* client)
@@ -368,7 +368,7 @@ namespace samsungce {
 
 	void DishwasherJobState::parseStatus(const nlohmann::json&) {
 		{ auto v = attributeValue("scheduledJobs"); if (!v.is_null()) SetPropertyValueAndNotify<&DishwasherJobState::ScheduledJobs>(_scheduledJobs, v); }
-		SetPropertyValueAndNotify<&DishwasherJobState::DishwasherJobStateValue>(_dishwasherJobState, attributeString("dishwasherJobState", _dishwasherJobState));
+		SetPropertyValueAndNotify<&DishwasherJobState::DishwasherJobStateValue>(_dishwasherJobStateValue, attributeString("dishwasherJobState", _dishwasherJobStateValue));
 	}
 
 	DishwasherOperation::DishwasherOperation(int version, std::string componentId, std::string deviceId, Client* client)
@@ -588,7 +588,7 @@ namespace samsungce {
 	}
 
 	void DriverState::parseStatus(const nlohmann::json&) {
-		{ auto v = attributeValue("driverState"); if (!v.is_null()) SetPropertyValueAndNotify<&DriverState::DriverStateValue>(_driverState, v); }
+		{ auto v = attributeValue("driverState"); if (!v.is_null()) SetPropertyValueAndNotify<&DriverState::DriverStateValue>(_driverStateValue, v); }
 	}
 
 	DriverVersion::DriverVersion(int version, std::string componentId, std::string deviceId, Client* client)
@@ -645,7 +645,7 @@ namespace samsungce {
 
 	void FreezerConvertMode::parseStatus(const nlohmann::json&) {
 		{ auto v = attributeStringArray("supportedFreezerConvertModes"); if (!v.empty()) SetPropertyValueAndNotify<&FreezerConvertMode::SupportedFreezerConvertModes>(_supportedFreezerConvertModes, v); }
-		SetPropertyValueAndNotify<&FreezerConvertMode::FreezerConvertModeValue>(_freezerConvertMode, attributeString("freezerConvertMode", _freezerConvertMode));
+		SetPropertyValueAndNotify<&FreezerConvertMode::FreezerConvertModeValue>(_freezerConvertModeValue, attributeString("freezerConvertMode", _freezerConvertModeValue));
 	}
 
 	Result<void> FreezerConvertMode::setFreezerConvertMode(const std::string& freezerConvertMode) {
@@ -811,7 +811,7 @@ namespace samsungce {
 	}
 
 	void QuickControl::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&QuickControl::VersionAttr>(_version, attributeString("version", _version));
+		SetPropertyValueAndNotify<&QuickControl::VersionAttr>(_versionAttr, attributeString("version", _versionAttr));
 	}
 
 	SabbathMode::SabbathMode(int version, std::string componentId, std::string deviceId, Client* client)
@@ -836,7 +836,7 @@ namespace samsungce {
 	}
 
 	void SelfCheck::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&SelfCheck::ResultAttr>(_result, attributeString("result", _result));
+		SetPropertyValueAndNotify<&SelfCheck::ResultAttr>(_resultAttr, attributeString("result", _resultAttr));
 		{ auto v = attributeStringArray("supportedActions"); if (!v.empty()) SetPropertyValueAndNotify<&SelfCheck::SupportedActions>(_supportedActions, v); }
 		SetPropertyValueAndNotify<&SelfCheck::Progress>(_progress, static_cast<int>(attributeNumber("progress", _progress)));
 		{ auto v = attributeValue("errors"); if (!v.is_null()) SetPropertyValueAndNotify<&SelfCheck::Errors>(_errors, v); }
@@ -1097,7 +1097,7 @@ namespace samsungce {
 		SetPropertyValueAndNotify<&WasherCycle::CycleType>(_cycleType, attributeString("cycleType", _cycleType));
 		{ auto v = attributeValue("supportedCycles"); if (!v.is_null()) SetPropertyValueAndNotify<&WasherCycle::SupportedCycles>(_supportedCycles, v); }
 		{ auto v = attributeStringArray("availableCycleTypes"); if (!v.empty()) SetPropertyValueAndNotify<&WasherCycle::AvailableCycleTypes>(_availableCycleTypes, v); }
-		SetPropertyValueAndNotify<&WasherCycle::WasherCycleValue>(_washerCycle, attributeString("washerCycle", _washerCycle));
+		SetPropertyValueAndNotify<&WasherCycle::WasherCycleValue>(_washerCycleValue, attributeString("washerCycle", _washerCycleValue));
 		{ auto v = attributeValue("referenceTable"); if (!v.is_null()) SetPropertyValueAndNotify<&WasherCycle::ReferenceTable>(_referenceTable, v); }
 		SetPropertyValueAndNotify<&WasherCycle::SpecializedFunctionClassification>(_specializedFunctionClassification, static_cast<int>(attributeNumber("specializedFunctionClassification", _specializedFunctionClassification)));
 	}
@@ -1282,7 +1282,7 @@ namespace samsungce {
 	}
 
 	void WelcomeMessage::parseStatus(const nlohmann::json&) {
-		{ auto v = attributeValue("welcomeMessage"); if (!v.is_null()) SetPropertyValueAndNotify<&WelcomeMessage::WelcomeMessageValue>(_welcomeMessage, v); }
+		{ auto v = attributeValue("welcomeMessage"); if (!v.is_null()) SetPropertyValueAndNotify<&WelcomeMessage::WelcomeMessageValue>(_welcomeMessageValue, v); }
 	}
 
 	Result<void> WelcomeMessage::deleteWelcomeMessage() {

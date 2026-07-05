@@ -12,13 +12,13 @@ namespace samsungce {
 
 		DriverState(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DriverStateValue{ [this]() { return _driverState; } };
+		ReactiveLitepp::ReadonlyProperty<nlohmann::json> DriverStateValue{ [this]() { return _driverStateValue; } };
 
 	protected:
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		nlohmann::json _driverState;
+		nlohmann::json _driverStateValue;
 	};
 
 } // namespace samsungce

@@ -12,7 +12,7 @@ namespace custom {
 
 		WasherAutoSoftener(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherAutoSoftenerValue{ [this]() { return _washerAutoSoftener; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherAutoSoftenerValue{ [this]() { return _washerAutoSoftenerValue; } };
 
 		Result<void> setWasherAutoSoftener(const std::string& washerAutoSoftener);
 		std::vector<std::string> commandNames() const override { return { "setWasherAutoSoftener" }; }
@@ -21,7 +21,7 @@ namespace custom {
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		std::string _washerAutoSoftener;
+		std::string _washerAutoSoftenerValue;
 	};
 
 } // namespace custom

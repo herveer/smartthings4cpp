@@ -201,7 +201,7 @@ int main() {
 	if (!device) {
 		// First device with a capability we can safely demonstrate.
 		for (auto& candidate : client.getDevices()) {
-			if (candidate->hasCapability<samsungce::TemperatureSetting>() && candidate->hasCapability<TemperatureMeasurement>()) {
+			if (candidate->hasCapability<samsungce::TemperatureSetting>() && candidate->hasCapability<standard::TemperatureMeasurement>()) {
 				device = std::move(candidate);
 				break;
 			}
@@ -218,7 +218,7 @@ int main() {
 	device->refreshStatus();
 	std::cout << "\nTemperatureSetting capability state: "
 		<< device->getCapability<samsungce::TemperatureSetting>("cooler")->DesiredTemperature.Get()
-		<< std::endl << device->getCapability<TemperatureMeasurement>("cooler")->Temperature.Get() << std::endl;
+		<< std::endl << device->getCapability<standard::TemperatureMeasurement>("cooler")->Temperature.Get() << std::endl;
 
 	std::cout << "\nDone!\n";
 	return 0;

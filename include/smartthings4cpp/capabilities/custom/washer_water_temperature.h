@@ -13,7 +13,7 @@ namespace custom {
 		WasherWaterTemperature(int version, std::string componentId, std::string deviceId, Client* client);
 
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWasherWaterTemperature{ [this]() { return _supportedWasherWaterTemperature; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherWaterTemperatureValue{ [this]() { return _washerWaterTemperature; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherWaterTemperatureValue{ [this]() { return _washerWaterTemperatureValue; } };
 
 		Result<void> setWasherWaterTemperature(const std::string& temperature);
 		std::vector<std::string> commandNames() const override { return { "setWasherWaterTemperature" }; }
@@ -23,7 +23,7 @@ namespace custom {
 
 	private:
 		std::vector<std::string> _supportedWasherWaterTemperature;
-		std::string _washerWaterTemperature;
+		std::string _washerWaterTemperatureValue;
 	};
 
 } // namespace custom

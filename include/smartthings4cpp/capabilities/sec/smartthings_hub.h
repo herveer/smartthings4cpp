@@ -16,7 +16,7 @@ namespace sec {
 		ReactiveLitepp::ReadonlyProperty<std::string> Availability{ [this]() { return _availability; } };
 		ReactiveLitepp::ReadonlyProperty<std::string> DeviceId{ [this]() { return _deviceId; } };
 		ReactiveLitepp::ReadonlyProperty<std::string> ZigbeeHardwareAvailability{ [this]() { return _zigbeeHardwareAvailability; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> VersionAttr{ [this]() { return _version; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> VersionAttr{ [this]() { return _versionAttr; } };
 		ReactiveLitepp::ReadonlyProperty<bool> ThreadRequiresExternalHardware{ [this]() { return _threadRequiresExternalHardware; } };
 		ReactiveLitepp::ReadonlyProperty<bool> ZigbeeRequiresExternalHardware{ [this]() { return _zigbeeRequiresExternalHardware; } };
 		ReactiveLitepp::ReadonlyProperty<std::string> Eui{ [this]() { return _eui; } };
@@ -39,7 +39,7 @@ namespace sec {
 		std::string _availability;
 		std::string _deviceId;
 		std::string _zigbeeHardwareAvailability;
-		std::string _version;
+		std::string _versionAttr;
 		bool _threadRequiresExternalHardware = false;
 		bool _zigbeeRequiresExternalHardware = false;
 		std::string _eui;

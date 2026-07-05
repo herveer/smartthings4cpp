@@ -13,7 +13,7 @@ namespace custom {
 		FridgeMode(int version, std::string componentId, std::string deviceId, Client* client);
 
 		ReactiveLitepp::ReadonlyProperty<std::string> FridgeModeValue{ [this]() { return _fridgeModeValue; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> FridgeModeValue_{ [this]() { return _fridgeMode; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> FridgeModeValue_{ [this]() { return _fridgeModeValue_; } };
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFridgeOptions{ [this]() { return _supportedFridgeOptions; } };
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFullFridgeModes{ [this]() { return _supportedFullFridgeModes; } };
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedFridgeModes{ [this]() { return _supportedFridgeModes; } };
@@ -26,7 +26,7 @@ namespace custom {
 
 	private:
 		std::string _fridgeModeValue;
-		std::string _fridgeMode;
+		std::string _fridgeModeValue_;
 		std::vector<std::string> _supportedFridgeOptions;
 		std::vector<std::string> _supportedFullFridgeModes;
 		std::vector<std::string> _supportedFridgeModes;

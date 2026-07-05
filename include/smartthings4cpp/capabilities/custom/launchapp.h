@@ -12,7 +12,7 @@ namespace custom {
 
 		Launchapp(int version, std::string componentId, std::string deviceId, Client* client);
 
-		Result<void> launchAppCommand(const std::string& appId, const std::string& appName);
+		Result<void> launchApp(const std::string& appId, const std::string& appName);
 		std::vector<std::string> commandNames() const override { return { "launchApp" }; }
 	};
 

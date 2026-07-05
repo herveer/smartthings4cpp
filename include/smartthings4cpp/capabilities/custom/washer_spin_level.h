@@ -12,7 +12,7 @@ namespace custom {
 
 		WasherSpinLevel(int version, std::string componentId, std::string deviceId, Client* client);
 
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherSpinLevelValue{ [this]() { return _washerSpinLevel; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherSpinLevelValue{ [this]() { return _washerSpinLevelValue; } };
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWasherSpinLevel{ [this]() { return _supportedWasherSpinLevel; } };
 
 		Result<void> setWasherSpinLevel(const std::string& spinLevel);
@@ -22,7 +22,7 @@ namespace custom {
 		void parseStatus(const nlohmann::json& status) override;
 
 	private:
-		std::string _washerSpinLevel;
+		std::string _washerSpinLevelValue;
 		std::vector<std::string> _supportedWasherSpinLevel;
 	};
 

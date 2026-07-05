@@ -73,7 +73,7 @@ namespace samsungvd {
 	}
 
 	void DeviceCategory::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&DeviceCategory::CategoryAttr>(_category, attributeString("category", _category));
+		SetPropertyValueAndNotify<&DeviceCategory::CategoryAttr>(_categoryAttr, attributeString("category", _categoryAttr));
 	}
 
 	FirmwareVersion::FirmwareVersion(int version, std::string componentId, std::string deviceId, Client* client)
@@ -81,7 +81,7 @@ namespace samsungvd {
 	}
 
 	void FirmwareVersion::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&FirmwareVersion::FirmwareVersionValue>(_firmwareVersion, attributeString("firmwareVersion", _firmwareVersion));
+		SetPropertyValueAndNotify<&FirmwareVersion::FirmwareVersionValue>(_firmwareVersionValue, attributeString("firmwareVersion", _firmwareVersionValue));
 	}
 
 	Result<void> FirmwareVersion::setFirmwareVersion(const std::string& version) {
@@ -190,7 +190,7 @@ namespace samsungvd {
 	}
 
 	void SupportsPowerOnByOcf::parseStatus(const nlohmann::json&) {
-		SetPropertyValueAndNotify<&SupportsPowerOnByOcf::SupportsPowerOnByOcfValue>(_supportsPowerOnByOcf, attributeString("supportsPowerOnByOcf", _supportsPowerOnByOcf));
+		SetPropertyValueAndNotify<&SupportsPowerOnByOcf::SupportsPowerOnByOcfValue>(_supportsPowerOnByOcfValue, attributeString("supportsPowerOnByOcf", _supportsPowerOnByOcfValue));
 	}
 
 	ThingStatus::ThingStatus(int version, std::string componentId, std::string deviceId, Client* client)

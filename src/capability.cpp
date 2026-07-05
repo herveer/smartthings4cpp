@@ -119,46 +119,12 @@ namespace smartthings4cpp {
 
 	std::unique_ptr<Capability> createCapability(const std::string& id, int version,
 		const std::string& componentId, const std::string& deviceId, Client* client) {
-		if (id == Switch::CAPABILITY_ID)
-			return std::make_unique<Switch>(version, componentId, deviceId, client);
-		if (id == SwitchLevel::CAPABILITY_ID)
-			return std::make_unique<SwitchLevel>(version, componentId, deviceId, client);
-		if (id == AudioVolume::CAPABILITY_ID)
-			return std::make_unique<AudioVolume>(version, componentId, deviceId, client);
-		if (id == AudioMute::CAPABILITY_ID)
-			return std::make_unique<AudioMute>(version, componentId, deviceId, client);
-		if (id == ContactSensor::CAPABILITY_ID)
-			return std::make_unique<ContactSensor>(version, componentId, deviceId, client);
-		if (id == TemperatureMeasurement::CAPABILITY_ID)
-			return std::make_unique<TemperatureMeasurement>(version, componentId, deviceId, client);
-		if (id == ThermostatCoolingSetpoint::CAPABILITY_ID)
-			return std::make_unique<ThermostatCoolingSetpoint>(version, componentId, deviceId, client);
-		if (id == Refresh::CAPABILITY_ID)
-			return std::make_unique<Refresh>(version, componentId, deviceId, client);
-		if (id == MediaPlayback::CAPABILITY_ID)
-			return std::make_unique<MediaPlayback>(version, componentId, deviceId, client);
-		if (id == MediaTrackControl::CAPABILITY_ID)
-			return std::make_unique<MediaTrackControl>(version, componentId, deviceId, client);
-		if (id == MediaInputSource::CAPABILITY_ID)
-			return std::make_unique<MediaInputSource>(version, componentId, deviceId, client);
-		if (id == TvChannel::CAPABILITY_ID)
-			return std::make_unique<TvChannel>(version, componentId, deviceId, client);
-		if (id == PowerConsumptionReport::CAPABILITY_ID)
-			return std::make_unique<PowerConsumptionReport>(version, componentId, deviceId, client);
-		if (id == RemoteControlStatus::CAPABILITY_ID)
-			return std::make_unique<RemoteControlStatus>(version, componentId, deviceId, client);
-		if (id == DemandResponseLoadControl::CAPABILITY_ID)
-			return std::make_unique<DemandResponseLoadControl>(version, componentId, deviceId, client);
-		if (id == WasherOperatingState::CAPABILITY_ID)
-			return std::make_unique<WasherOperatingState>(version, componentId, deviceId, client);
-		if (id == Refrigeration::CAPABILITY_ID)
-			return std::make_unique<Refrigeration>(version, componentId, deviceId, client);
-		if (id == Execute::CAPABILITY_ID)
-			return std::make_unique<Execute>(version, componentId, deviceId, client);
-		if (id == Ocf::CAPABILITY_ID)
-			return std::make_unique<Ocf>(version, componentId, deviceId, client);
+		// Every typed capability is generated (see tools/generate_capabilities.ps1):
+		// standard ids first, then the Samsung-proprietary ids, else UnknownCapability.
+		if (auto standard = createStandardCapability(id, version, componentId, deviceId, client)) {
+			return standard;
+		}
 
-		// Generated Samsung-proprietary capabilities (samsungce.*, custom.*, ...).
 		if (auto proprietary = createProprietaryCapability(id, version, componentId, deviceId, client)) {
 			return proprietary;
 		}

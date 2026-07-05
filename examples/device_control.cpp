@@ -13,8 +13,8 @@
  *   4. Send a REAL command chosen to be self-reversing, and show before/after state
  *
  * The command is chosen to restore the original state automatically:
- *   - audioVolume: volumeUp() then setVolume(original)
- *   - switch:      toggle() then toggle() back
+ *   - audioVolume: setVolume(...) then setVolume(original)
+ *   - switch:      on()/off() flip, then flipped back
  *   - refresh:     refresh() (no state change)
  *
  * The PAT needs r:devices:* (read), x:devices:* (commands) and r:locations:* scopes.
@@ -31,6 +31,7 @@
 #include <thread>
 
 using namespace smartthings4cpp;
+using namespace smartthings4cpp::standard; // typed standard capabilities (Switch, AudioVolume, ...)
 
 namespace {
 
@@ -72,21 +73,19 @@ namespace {
 		for (const auto& component : device.getComponents()) {
 			std::cout << "  [" << component.id << "]\n";
 			if (auto* sw = component.get<Switch>())
-				std::cout << "      switch:          " << sw->State.Get() << "\n";
+				std::cout << "      switch:          " << sw->SwitchValue.Get() << "\n";
 			if (auto* level = component.get<SwitchLevel>())
 				std::cout << "      level:           " << level->Level.Get() << "%\n";
 			if (auto* vol = component.get<AudioVolume>())
 				std::cout << "      volume:          " << vol->Volume.Get() << "%\n";
 			if (auto* m = component.get<AudioMute>())
-				std::cout << "      mute:            " << m->MuteState.Get() << "\n";
+				std::cout << "      mute:            " << m->Mute.Get() << "\n";
 			if (auto* contact = component.get<ContactSensor>())
 				std::cout << "      contact:         " << contact->Contact.Get() << "\n";
 			if (auto* temp = component.get<TemperatureMeasurement>())
-				std::cout << "      temperature:     " << temp->Temperature.Get()
-				<< " " << temp->Unit.Get() << "\n";
+				std::cout << "      temperature:     " << temp->Temperature.Get() << "\n";
 			if (auto* sp = component.get<ThermostatCoolingSetpoint>())
-				std::cout << "      coolingSetpoint: " << sp->CoolingSetpoint.Get()
-				<< " " << sp->Unit.Get() << "\n";
+				std::cout << "      coolingSetpoint: " << sp->CoolingSetpoint.Get() << "\n";
 		}
 	}
 
@@ -122,14 +121,15 @@ namespace {
 		}
 
 		if (auto* sw = device.getCapability<Switch>()) {
-			std::string original = sw->State.Get();
+			std::string original = sw->SwitchValue.Get();
 			std::cout << "  switch before: " << original << "\n";
-			if (report("toggle()", sw->toggle())) {
+			auto flip = [&](const std::string& state) { return state == "on" ? sw->off() : sw->on(); };
+			if (report("flip()", flip(original))) {
 				device.refreshStatus();
-				std::cout << "  switch now:    " << sw->State.Get() << "\n";
-				report("toggle() back", sw->toggle());
+				std::cout << "  switch now:    " << sw->SwitchValue.Get() << "\n";
+				report("flip() back", flip(sw->SwitchValue.Get()));
 				device.refreshStatus();
-				std::cout << "  switch after:  " << sw->State.Get() << "\n";
+				std::cout << "  switch after:  " << sw->SwitchValue.Get() << "\n";
 			}
 			return;
 		}

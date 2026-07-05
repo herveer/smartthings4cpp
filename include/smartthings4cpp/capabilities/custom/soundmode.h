@@ -13,7 +13,7 @@ namespace custom {
 		Soundmode(int version, std::string componentId, std::string deviceId, Client* client);
 
 		ReactiveLitepp::ReadonlyProperty<nlohmann::json> SupportedSoundModesMap{ [this]() { return _supportedSoundModesMap; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> SoundModeValue{ [this]() { return _soundMode; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> SoundModeValue{ [this]() { return _soundModeValue; } };
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedSoundModes{ [this]() { return _supportedSoundModes; } };
 
 		Result<void> setSoundMode(const std::string& mode);
@@ -24,7 +24,7 @@ namespace custom {
 
 	private:
 		nlohmann::json _supportedSoundModesMap;
-		std::string _soundMode;
+		std::string _soundModeValue;
 		std::vector<std::string> _supportedSoundModes;
 	};
 

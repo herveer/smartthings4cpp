@@ -13,7 +13,7 @@ namespace custom {
 		WasherRinseCycles(int version, std::string componentId, std::string deviceId, Client* client);
 
 		ReactiveLitepp::ReadonlyProperty<std::vector<std::string>> SupportedWasherRinseCycles{ [this]() { return _supportedWasherRinseCycles; } };
-		ReactiveLitepp::ReadonlyProperty<std::string> WasherRinseCyclesValue{ [this]() { return _washerRinseCycles; } };
+		ReactiveLitepp::ReadonlyProperty<std::string> WasherRinseCyclesValue{ [this]() { return _washerRinseCyclesValue; } };
 
 		Result<void> setWasherRinseCycles(const std::string& cycle);
 		std::vector<std::string> commandNames() const override { return { "setWasherRinseCycles" }; }
@@ -23,7 +23,7 @@ namespace custom {
 
 	private:
 		std::vector<std::string> _supportedWasherRinseCycles;
-		std::string _washerRinseCycles;
+		std::string _washerRinseCyclesValue;
 	};
 
 } // namespace custom
