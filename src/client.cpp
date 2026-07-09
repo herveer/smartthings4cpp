@@ -101,6 +101,10 @@ namespace smartthings4cpp {
 		_lifetimeHub = std::make_shared<DeviceLifetimeHub>();
 		_lifetimeHub->client = this;
 
+		// Inbound webhooks are cryptographically verified out of the box (see
+		// setWebhookSignatureVerifier() to replace or disable this).
+		_webhookVerifier = makeDefaultWebhookSignatureVerifier();
+
 		// Rehydrate persisted state so a second run authenticates silently.
 		if (_storage) {
 			if (auto appId = _storage->getValue("installedAppId")) {
@@ -139,14 +143,10 @@ namespace smartthings4cpp {
 		if (_httpServer) {
 			_httpServer->bind(
 				[this](std::string args) { onOAuthRedirect(std::move(args)); },
-				[this](nlohmann::json body) -> nlohmann::json {
-					auto response = handleWebhook(body.dump());
-					try {
-						return json_utils::parse(response.body);
-					}
-					catch (const std::exception&) {
-						return nlohmann::json::object();
-					}
+				[this](const WebhookRequest& request) -> WebhookResponse {
+					// The verifying overload: the request's HTTP-Signature is
+					// checked (default verifier) before the messageType is handled.
+					return handleWebhook(request);
 				});
 			_serverStart = _httpServer->start();
 		}
@@ -200,10 +200,6 @@ namespace smartthings4cpp {
 
 	bool Client::isAuthenticated() const {
 		return !_access_token.empty();
-	}
-
-	void Client::setTokenRefreshCallback(std::function<Result<std::string>()> callback) {
-		_token_refresh_callback = std::move(callback);
 	}
 
 	void Client::setBaseUrl(const std::string& url) {

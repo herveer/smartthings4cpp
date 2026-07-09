@@ -4,6 +4,7 @@ set(SMARTTHINGS4CPP_SOURCES
     device.cpp
     capability.cpp
     webhook.cpp
+    webhook_signature.cpp
     http_client.cpp
     http_server.cpp
     storage.cpp
@@ -65,7 +66,9 @@ target_link_libraries(smartthings4cpp
 
 if (WIN32)
     # advapi32: Windows Credential Manager (Cred* APIs) used by storage.cpp.
-    target_link_libraries(smartthings4cpp PUBLIC ws2_32 PRIVATE advapi32)
+    # bcrypt + crypt32: RSA-SHA256 webhook signature verification (CNG /
+    # CryptoAPI) in webhook_signature.cpp - no OpenSSL exists in this toolchain.
+    target_link_libraries(smartthings4cpp PUBLIC ws2_32 PRIVATE advapi32 bcrypt crypt32)
     # windows.h (pulled in transitively via cpr/curl) defines max/min macros
     # that shadow std::max/std::min unless this is set - needed for the
     # polling interval clamp in client.cpp. PUBLIC so consumers (examples,

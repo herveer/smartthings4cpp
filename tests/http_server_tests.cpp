@@ -96,12 +96,17 @@ TEST_CASE("DefaultHttpServer serves the OAuth and webhook routes (loopback)", "[
 		"http://localhost:" + std::to_string(port));
 
 	std::string oauthArgs;
-	nlohmann::json webhookBody;
+	WebhookRequest received;
+	bool webhookHit = false;
 	server->bind(
 		[&](std::string args) { oauthArgs = std::move(args); },
-		[&](nlohmann::json body) {
-			webhookBody = std::move(body);
-			return nlohmann::json{ { "echo", true } };
+		[&](const WebhookRequest& req) {
+			received = req;
+			webhookHit = true;
+			WebhookResponse resp;
+			resp.statusCode = 202;
+			resp.body = R"({"echo":true})";
+			return resp;
 		});
 
 	REQUIRE(server->start().isSuccess());
@@ -118,19 +123,21 @@ TEST_CASE("DefaultHttpServer serves the OAuth and webhook routes (loopback)", "[
 		REQUIRE(oauthArgs.find("state=xyz") != std::string::npos);
 	}
 
-	SECTION("POST on the webhook route round-trips JSON") {
+	SECTION("POST forwards the raw request (body/line/headers) and relays the response") {
 		auto response = http.post(base + "/webhook", R"({"messageType":"PING"})",
-			{ { "Content-Type", "application/json" } });
-		REQUIRE(response.isSuccess());
-		REQUIRE(webhookBody["messageType"] == "PING");
+			{ { "Content-Type", "application/json" }, { "X-Test-Header", "abc123" } });
+		REQUIRE(webhookHit);
+		REQUIRE(received.method == "POST");
+		REQUIRE(received.path == "/webhook");
+		// Body is passed through byte-for-byte (never re-serialized) so its
+		// SHA-256 still matches the Digest a real signature covers.
+		REQUIRE(received.body == R"({"messageType":"PING"})");
+		// Headers are forwarded and looked up case-insensitively.
+		REQUIRE(received.header("x-test-header").value_or("") == "abc123");
+		REQUIRE(received.header("Content-Type").value_or("") == "application/json");
+		// The callback's status + body are exactly what the client receives.
+		REQUIRE(response.status_code == 202);
 		REQUIRE(json_utils::parse(response.body)["echo"] == true);
-	}
-
-	SECTION("invalid JSON on the webhook route is rejected with 400") {
-		auto response = http.post(base + "/webhook", "this is not json",
-			{ { "Content-Type", "application/json" } });
-		REQUIRE(response.status_code == 400);
-		REQUIRE(webhookBody.is_null()); // callback never invoked
 	}
 
 	server->stop();
@@ -138,7 +145,7 @@ TEST_CASE("DefaultHttpServer serves the OAuth and webhook routes (loopback)", "[
 
 TEST_CASE("DefaultHttpServer start() is idempotent and stop() is prompt", "[httpserver]") {
 	auto server = makeDefaultHttpServer(0, "/oauth/callback", "/webhook", "http://localhost");
-	server->bind([](std::string) {}, [](nlohmann::json) { return nlohmann::json::object(); });
+	server->bind([](std::string) {}, [](const WebhookRequest&) { return WebhookResponse{}; });
 
 	REQUIRE(server->start().isSuccess());
 	REQUIRE(server->start().isSuccess()); // second start is a no-op
@@ -161,6 +168,11 @@ TEST_CASE("A webhook EVENT POSTed to the embedded server updates live Devices", 
 	config.clientSecret = "test-secret";
 	Client client(config, std::move(server),
 		std::make_unique<InMemoryStorage>(), std::make_unique<InMemoryStorage>());
+
+	// This test drives the event-dispatch pipeline with an unsigned request, so
+	// turn off the (default-on in OAuth mode) HTTP-Signature verification;
+	// signature verification has its own coverage in webhook_signature_tests.
+	client.setWebhookSignatureVerifier(nullptr);
 
 	// Not authenticated: the automatic subscription for this device is parked
 	// as pending (no network), but event dispatch works regardless.

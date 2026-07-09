@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "webhook.h"
+#include "webhook_signature.h"
 #include "http_server.h"
 #include "storage.h"
 #include "oauth2/oauth2_types.h"
@@ -186,21 +187,6 @@ namespace smartthings4cpp {
 		 * @note This does not contact the API; use validateAuthentication() for that.
 		 */
 		bool isAuthenticated() const;
-
-		/**
-		 * @brief Configure transparent token refresh on authentication expiry
-		 *
-		 * When set, any request that gets back HTTP 401 invokes @p callback
-		 * once to obtain a fresh access token, then retries that single request
-		 * before giving up. This is how OAuth2 access-token expiry (see
-		 * smartthings4cpp::oauth2::OAuth2Authenticator) is made as transparent
-		 * to callers as a Personal Access Token, which never expires mid-session.
-		 * Optional: a PAT-only Client that never calls this behaves exactly as
-		 * before (a 401 is simply returned to the caller, as today).
-		 * @param callback Returns a new access token, or an error Result if the
-		 *        refresh itself failed (e.g. the refresh token is also expired)
-		 */
-		void setTokenRefreshCallback(std::function<Result<std::string>()> callback);
 
 		/**
 		 * @brief Validate the configured token against the SmartThings API
@@ -459,11 +445,39 @@ namespace smartthings4cpp {
 		 * back to SmartThings (status + JSON body, application/json).
 		 * @param rawBody The exact request body SmartThings POSTed
 		 * @return The HTTP response to return, plus which messageType was handled
-		 * @note This iteration does NOT cryptographically verify the request
-		 *       signature; keep the endpoint behind a trusted tunnel. Signature
-		 *       verification is a planned follow-up.
+		 * @note This overload has no request headers to check, so it does NOT
+		 *       verify the HTTP-Signature - it trusts its input. The
+		 *       IHttpServer delivers real requests through the WebhookRequest
+		 *       overload below, which does verify when a signature verifier is
+		 *       configured (the default in OAuth mode).
 		 */
 		WebhookResponse handleWebhook(const std::string& rawBody);
+
+		/**
+		 * @brief Process one webhook request, verifying its signature first
+		 *
+		 * The full-fidelity entry point the embedded/injected IHttpServer calls:
+		 * given the raw body plus the request line and headers, it first runs the
+		 * configured IWebhookSignatureVerifier (rejecting the request with HTTP
+		 * 401 if the HTTP-Signature is absent, malformed or invalid), then handles
+		 * the messageType exactly as the string overload does. With no verifier
+		 * set, verification is skipped.
+		 * @param request The raw inbound request (body, request line, headers)
+		 * @return The HTTP response to return, plus which messageType was handled
+		 */
+		WebhookResponse handleWebhook(const WebhookRequest& request);
+
+		/**
+		 * @brief Set (or clear) the webhook HTTP-Signature verifier
+		 *
+		 * OAuth-mode Clients install a default verifier automatically (see
+		 * makeDefaultWebhookSignatureVerifier()), so inbound webhooks are
+		 * cryptographically verified out of the box. Replace it to customize the
+		 * behavior (e.g. a different crypto backend on non-Windows), or pass
+		 * @c nullptr to turn verification off.
+		 * @param verifier The verifier to use, or nullptr to disable verification
+		 */
+		void setWebhookSignatureVerifier(std::unique_ptr<IWebhookSignatureVerifier> verifier);
 
 		/**
 		 * @brief Override the API base URL (mainly for testing / mocking)
@@ -514,6 +528,9 @@ namespace smartthings4cpp {
 		std::unique_ptr<IHttpServer> _httpServer;
 		std::unique_ptr<IStorageProvider> _keychain; // secrets: the OAuth token pair
 		std::unique_ptr<IStorageProvider> _storage;  // plain state: installed-app id
+		// Verifies inbound webhooks' HTTP-Signature; null disables verification
+		// (default on a PAT Client, installed automatically in OAuth mode).
+		std::unique_ptr<IWebhookSignatureVerifier> _webhookVerifier;
 		Result<void> _serverStart{ ErrorCode::InvalidRequest, "not an OAuth client" };
 
 		// waitForAuthentication() rendezvous with the async browser round-trip.
@@ -575,6 +592,11 @@ namespace smartthings4cpp {
 		/// device id, returning its currently-live Device objects. Used to fan a
 		/// single webhook device event out to every Device wrapping that id.
 		std::vector<std::shared_ptr<Device>> liveDevicesFor(const std::string& deviceId);
+
+		/// Handle a webhook request's messageType (PING/EVENT/...) without any
+		/// signature verification - the shared core both handleWebhook() overloads
+		/// call once the request is (or is trusted to be) authentic.
+		WebhookResponse processWebhook(const WebhookRequest& request);
 
 		/// Token used for /installedapps subscription calls: the installed-app
 		/// token captured from the messageType if present, else the access token.

@@ -24,8 +24,10 @@
  *   - Toggle a device in the SmartThings app and watch PropertyChanged fire
  *     here, pushed by SmartThings - no polling anywhere.
  *
- * NOTE: the webhook payload signature is not yet cryptographically verified;
- * keep the endpoint behind your own tunnel.
+ * Inbound webhook requests are cryptographically verified automatically: their
+ * HTTP-Signature is checked against SmartThings' published public key before the
+ * event is acted on (see Client::setWebhookSignatureVerifier() to customize or
+ * disable it).
  */
 
 #include <smartthings4cpp/smartthings4cpp.h>

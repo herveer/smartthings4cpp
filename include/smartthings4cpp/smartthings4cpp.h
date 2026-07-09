@@ -18,6 +18,7 @@
 #include "smartthings4cpp/client.h"
 #include "smartthings4cpp/device.h"
 #include "smartthings4cpp/webhook.h"
+#include "smartthings4cpp/webhook_signature.h"
 #include "smartthings4cpp/http_server.h"
 #include "smartthings4cpp/storage.h"
 #include "smartthings4cpp/oauth2/oauth2_types.h"

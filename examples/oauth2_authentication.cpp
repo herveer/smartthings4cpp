@@ -232,19 +232,6 @@ int main() {
 	Client client;
 	client.setAccessToken(token->accessToken);
 
-	// Wire transparent refresh: if a request ever comes back 401 (e.g. this
-	// process outlives the access token's 24h lifetime), Client asks this
-	// callback for a fresh token instead of just failing the request.
-	client.setTokenRefreshCallback([&]() -> Result<std::string> {
-		auto refreshed = authenticator.refresh(token->refreshToken);
-		if (!refreshed.isSuccess() || !refreshed.hasValue()) {
-			return Result<std::string>(refreshed.error, refreshed.error_message);
-		}
-		token = *refreshed.value;
-		saveToken(*token);
-		return Result<std::string>(token->accessToken);
-	});
-
 	std::cout << "\nValidating token with the SmartThings API...\n";
 	auto validation = client.validateAuthentication();
 

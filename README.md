@@ -43,6 +43,10 @@ the SmartThings cloud simple and intuitive.
   creates/deletes device event subscriptions automatically as `Device` objects
   come and go — same `PropertyChanged`, no polling. Custom apps can inject their
   own `IHttpServer`/`IStorageProvider` implementations instead
+- 🔏 **Verified webhooks** — every inbound webhook's HTTP-Signature is checked
+  against SmartThings' published public key (and its body against the signed
+  `Digest`) before the event is acted on; on by default in OAuth mode, with
+  `IWebhookSignatureVerifier` as the injectable escape hatch
 - 📦 **vcpkg + CMake** — easy dependency management and integration
 - 🔧 **Cross-platform** — Windows, Linux, and macOS
 
@@ -233,8 +237,19 @@ Run `examples/event_updates` for the full working version. Everything the old
 manual wiring did (`subscribeTo`, `handleWebhook`, ...) is still public as an
 escape hatch, but normal consumers never touch it.
 
-> ⚠️ This iteration does not yet cryptographically verify the webhook signature —
-> keep the endpoint behind your trusted tunnel. Signature verification is planned.
+Inbound webhooks are **cryptographically verified** out of the box: every
+request's HTTP-Signature (`Authorization: Signature ...`, `rsa-sha256`) is
+checked against SmartThings' published public key — fetched from
+`https://key.smartthings.com` by key id and cached briefly — and its body is
+matched against the signed `Digest`, before the event is acted on. Verification
+uses native Windows CNG (there is no OpenSSL in this toolchain), so on other
+platforms inject your own verifier (or disable it) via
+`Client::setWebhookSignatureVerifier()`:
+
+```cpp
+client.setWebhookSignatureVerifier(makeDefaultWebhookSignatureVerifier(cfg));
+client.setWebhookSignatureVerifier(nullptr);   // opt out of verification
+```
 
 ## Building
 

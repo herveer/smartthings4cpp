@@ -1,6 +1,8 @@
 #pragma once
 
 #include "types.h"
+#include <map>
+#include <optional>
 #include <string>
 #include <nlohmann/json_fwd.hpp>
 
@@ -66,6 +68,34 @@ namespace smartthings4cpp {
 		Event,         ///< One or more device (or platform) events
 		Uninstall,     ///< App uninstalled
 		OAuthCallback  ///< OAuth callback phase
+	};
+
+	/**
+	 * @brief A raw inbound webhook request from SmartThings
+	 *
+	 * Everything Client::handleWebhook() needs to both process the request and
+	 * cryptographically verify its HTTP-Signature (see webhook_signature.h): the
+	 * exact bytes SmartThings sent (@c body - never re-serialized, so the SHA-256
+	 * digest still matches), the request line (@c method / @c path, which the
+	 * signature's @c (request-target) is built from), and the @c headers (which
+	 * carry the @c Authorization signature, @c Digest and @c Date).
+	 *
+	 * The embedded/injected IHttpServer fills this in for each POST; header keys
+	 * should be stored lowercased, but header() lowercases its argument too so
+	 * lookups are case-insensitive either way.
+	 */
+	struct WebhookRequest {
+		std::string method = "POST";                 ///< HTTP method, e.g. "POST"
+		std::string path;                            ///< Request target path (with any query), e.g. "/webhook"
+		std::string body;                            ///< Raw request body bytes, exactly as received
+		std::map<std::string, std::string> headers;  ///< Request headers (keys lowercased); values joined with ", " if repeated
+
+		/**
+		 * @brief Look up a header value case-insensitively
+		 * @param name Header name (any case)
+		 * @return The value, or std::nullopt if the header is absent
+		 */
+		std::optional<std::string> header(const std::string& name) const;
 	};
 
 	/**

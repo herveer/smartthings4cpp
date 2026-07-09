@@ -127,9 +127,15 @@ a typed class deriving from a polymorphic `Capability` base.
       own `IHttpServer`/`IStorageProvider` implementations via the DI
       constructor. All the manual calls (`subscribeTo`, `handleWebhook`, ...)
       remain public as escape hatches.
-- [ ] Cryptographic webhook signature verification (HTTP-Signature + ST public-key
-      retrieval) - this iteration parses the payload but does not yet verify the
-      sender; run the endpoint behind a trusted tunnel until this lands.
+- [x] Cryptographic webhook signature verification (HTTP-Signature + ST public-key
+      retrieval) - every inbound webhook's `Authorization: Signature` (rsa-sha256)
+      is verified against SmartThings' public key (an X.509 cert fetched from
+      `https://key.smartthings.com` by key id, cached briefly) and its body is
+      checked against the signed `Digest`; optional `Date`-freshness replay
+      protection is opt-in. On by default in OAuth mode; native Windows CNG crypto
+      (no OpenSSL in this toolchain), with `IWebhookSignatureVerifier` as the DI
+      escape hatch for other backends. Validated against a real captured event.
+      See `Client::setWebhookSignatureVerifier()`, `webhook_signature.h`.
 - [ ] Enterprise SSE "sink" eventing (outbound long-lived connection, no public
       receiver) - gated/unavailable on a self-created OAuth-In app; revisit if access opens up.
 
@@ -174,15 +180,15 @@ a typed class deriving from a polymorphic `Capability` base.
 
 ---
 
-**Last Updated**: 2026-07-04
+**Last Updated**: 2026-07-08
 **Current Phase**: Phase 3 — real-time updates ✅ both mechanisms shipped and
 **autonomous**: PAT clients poll automatically; OAuth clients embed their own
 OAuth/webhook server, self-authenticate (browser opening is the single manual
-step), persist tokens (Windows Credential Manager), and manage device event
-subscriptions with `Device` lifetimes — no consumer wiring in either mode.
+step), persist tokens (Windows Credential Manager), manage device event
+subscriptions with `Device` lifetimes, and **cryptographically verify inbound
+webhooks** (HTTP-Signature) out of the box — no consumer wiring in either mode.
 Phase 4 — OAuth 2.0 flow ✅, Windows keychain storage ✅ (macOS/Linux native
 backends still open)
-**Next Step**: harden the webhook path — cryptographic signature verification of
-inbound lifecycle requests (currently unverified; keep the endpoint behind a
-trusted tunnel), then native macOS/Linux keychain backends and more standard
+**Next Step**: native macOS/Linux keychain backends and a non-Windows crypto
+backend for `IWebhookSignatureVerifier` (Windows-only today), then more standard
 capabilities (colorControl, lock, ...) as needed.

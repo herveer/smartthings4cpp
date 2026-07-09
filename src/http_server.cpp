@@ -1,10 +1,12 @@
 #include "smartthings4cpp/http_server.h"
-#include "smartthings4cpp/json_utils.h"
 
 #include <httplib.h>
 
+#include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <chrono>
+#include <string>
 #include <thread>
 #include <utility>
 
@@ -20,6 +22,12 @@ namespace smartthings4cpp {
 				route.insert(route.begin(), '/');
 			}
 			return route;
+		}
+
+		std::string toLowerAscii(std::string s) {
+			std::transform(s.begin(), s.end(), s.begin(),
+				[](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+			return s;
 		}
 
 		/**
@@ -48,16 +56,28 @@ namespace smartthings4cpp {
 					});
 
 				_server.Post(_webhookRoute, [this](const httplib::Request& req, httplib::Response& res) {
-					nlohmann::json body;
-					try {
-						body = json_utils::parse(req.body);
+					// Forward the request verbatim: the body is left untouched (its
+					// SHA-256 must still match the Digest header) and the headers +
+					// request line are carried across so the callback can verify the
+					// HTTP-Signature. All body validation now lives in the callback.
+					WebhookRequest request;
+					request.method = req.method;
+					request.path = req.target.empty() ? req.path : req.target;
+					request.body = req.body;
+					for (const auto& header : req.headers) {
+						std::string key = toLowerAscii(header.first);
+						auto existing = request.headers.find(key);
+						if (existing == request.headers.end()) {
+							request.headers.emplace(std::move(key), header.second);
+						}
+						else {
+							existing->second += ", " + header.second; // combine repeats
+						}
 					}
-					catch (const std::exception&) {
-						res.status = 400;
-						res.set_content(R"({"error":"request body is not valid JSON"})", "application/json");
-						return;
-					}
-					res.set_content(onWebhookReceived(std::move(body)).dump(), "application/json");
+
+					WebhookResponse response = onWebhookReceived(request);
+					res.status = response.statusCode;
+					res.set_content(response.body, "application/json");
 					});
 			}
 

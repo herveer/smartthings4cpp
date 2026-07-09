@@ -103,7 +103,7 @@ namespace {
 		}
 
 		void simulateOAuthRedirect(std::string args) { onOAuthReceived(std::move(args)); }
-		nlohmann::json simulateWebhook(const nlohmann::json& body) { return onWebhookReceived(body); }
+		WebhookResponse simulateWebhook(const WebhookRequest& request) { return onWebhookReceived(request); }
 
 		bool started = false;
 	};
@@ -334,7 +334,7 @@ TEST_CASE("authenticate() is silent when a valid token is already stored", "[web
 	auto apiPort = testutil::freeLoopbackPort();
 	auto api = makeDefaultHttpServer(apiPort, "/devices", "/unused",
 		"http://localhost:" + std::to_string(apiPort));
-	api->bind([](std::string) {}, [](nlohmann::json) { return nlohmann::json::object(); });
+	api->bind([](std::string) {}, [](const WebhookRequest&) { return WebhookResponse{}; });
 	REQUIRE(api->start().isSuccess());
 	client.setBaseUrl("http://localhost:" + std::to_string(apiPort));
 

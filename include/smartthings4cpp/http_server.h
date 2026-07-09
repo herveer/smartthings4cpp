@@ -1,11 +1,11 @@
 #pragma once
 
 #include "types.h"
+#include "webhook.h"
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <nlohmann/json.hpp>
 
 /**
  * @file http_server.h
@@ -40,9 +40,12 @@ namespace smartthings4cpp {
 		/// Receives whatever the OAuth redirect carried - the full request
 		/// target, e.g. "/oauth/callback?code=...&state=...".
 		using OAuthCallback = std::function<void(std::string args)>;
-		/// Receives a webhook messageType request body and returns the JSON body
-		/// to respond with (HTTP 200, Content-Type application/json).
-		using WebhookCallback = std::function<nlohmann::json(nlohmann::json args)>;
+		/// Receives a raw webhook request (body, request line and headers - see
+		/// WebhookRequest) and returns the WebhookResponse to send back (its
+		/// statusCode and JSON body). Passing the raw request rather than a parsed
+		/// body is what lets the callback verify the HTTP-Signature, which is
+		/// computed over the exact bytes and the request line.
+		using WebhookCallback = std::function<WebhookResponse(const WebhookRequest& request)>;
 
 		virtual ~IHttpServer() = default;
 
@@ -93,17 +96,17 @@ namespace smartthings4cpp {
 		}
 
 		/// Implementations call this when a request hits the webhook route.
-		/// @return The JSON body to respond with (empty object if unbound).
-		nlohmann::json onWebhookReceived(nlohmann::json args) {
+		/// @return The response to send back (a plain 200 "{}" if unbound).
+		WebhookResponse onWebhookReceived(const WebhookRequest& request) {
 			WebhookCallback callback;
 			{
 				std::lock_guard<std::mutex> lock(_callbackMutex);
 				callback = _webhookCallback;
 			}
 			if (callback) {
-				return callback(std::move(args));
+				return callback(request);
 			}
-			return nlohmann::json::object();
+			return WebhookResponse{};
 		}
 
 	private:

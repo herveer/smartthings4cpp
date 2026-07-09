@@ -2,6 +2,18 @@
 
 namespace smartthings4cpp {
 
+namespace {
+    // A request with no URL never reaches the network; surface it as a normal
+    // NetworkError (status 0) instead of handing an empty URL to libcurl, which
+    // can crash on some builds. Callers already treat status 0 as NetworkError.
+    HttpResponse emptyUrlResponse() {
+        HttpResponse result;
+        result.status_code = 0;
+        result.error_message = "request URL is empty";
+        return result;
+    }
+}
+
 HttpClient::HttpClient() : _timeout(10000), _verify_ssl(true) {}
 
 void HttpClient::setTimeout(std::chrono::milliseconds timeout) {
@@ -46,6 +58,9 @@ HttpResponse HttpClient::convertResponse(const cpr::Response& response) {
 
 HttpResponse HttpClient::get(const std::string& url,
                               const std::map<std::string, std::string>& headers) {
+    if (url.empty()) {
+        return emptyUrlResponse();
+    }
     cpr::Session session;
     configureSession(session);
     session.SetUrl(cpr::Url{url});
@@ -65,6 +80,9 @@ HttpResponse HttpClient::get(const std::string& url,
 HttpResponse HttpClient::post(const std::string& url,
                                const std::string& body,
                                const std::map<std::string, std::string>& headers) {
+    if (url.empty()) {
+        return emptyUrlResponse();
+    }
     cpr::Session session;
     configureSession(session);
     session.SetUrl(cpr::Url{url});
@@ -86,6 +104,9 @@ HttpResponse HttpClient::post(const std::string& url,
 HttpResponse HttpClient::put(const std::string& url,
                               const std::string& body,
                               const std::map<std::string, std::string>& headers) {
+    if (url.empty()) {
+        return emptyUrlResponse();
+    }
     cpr::Session session;
     configureSession(session);
     session.SetUrl(cpr::Url{url});
@@ -106,6 +127,9 @@ HttpResponse HttpClient::put(const std::string& url,
 
 HttpResponse HttpClient::del(const std::string& url,
                               const std::map<std::string, std::string>& headers) {
+    if (url.empty()) {
+        return emptyUrlResponse();
+    }
     cpr::Session session;
     configureSession(session);
     session.SetUrl(cpr::Url{url});

@@ -11,6 +11,7 @@ set(TEST_SOURCES
     types_tests.cpp
     oauth2_authenticator_tests.cpp
     webhook_tests.cpp
+    webhook_signature_tests.cpp
     storage_tests.cpp
     http_server_tests.cpp
 )

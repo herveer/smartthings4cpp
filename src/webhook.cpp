@@ -92,6 +92,19 @@ namespace smartthings4cpp {
 		}
 	} // namespace
 
+	std::optional<std::string> WebhookRequest::header(const std::string& name) const {
+		std::string lowered;
+		lowered.reserve(name.size());
+		for (char c : name) {
+			lowered += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+		}
+		auto it = headers.find(lowered);
+		if (it == headers.end()) {
+			return std::nullopt;
+		}
+		return it->second;
+	}
+
 	nlohmann::json buildSubscriptionBody(const SubscriptionRequest& request) {
 		std::string name = request.subscriptionName.empty()
 			? makeSubscriptionName(request) : request.subscriptionName;
@@ -102,6 +115,10 @@ namespace smartthings4cpp {
 		};
 
 		return nlohmann::json{ { "sourceType", "DEVICE" }, { "device", std::move(device) }, { "subscriptionName", name } };
+	}
+
+	void Client::setWebhookSignatureVerifier(std::unique_ptr<IWebhookSignatureVerifier> verifier) {
+		_webhookVerifier = std::move(verifier);
 	}
 
 	// --- installed-app identity / token ------------------------------------
@@ -342,11 +359,36 @@ namespace smartthings4cpp {
 	// --- webhook messageType -------------------------------------------------
 
 	WebhookResponse Client::handleWebhook(const std::string& rawBody) {
+		// No transport metadata (headers/method/path), so the HTTP-Signature
+		// cannot be checked here: this overload trusts its input. Real inbound
+		// requests arrive through the IHttpServer as a WebhookRequest, which the
+		// overload below verifies before processing.
+		WebhookRequest request;
+		request.method = "POST";
+		request.body = rawBody;
+		return processWebhook(request);
+	}
+
+	WebhookResponse Client::handleWebhook(const WebhookRequest& request) {
+		if (_webhookVerifier) {
+			auto verified = _webhookVerifier->verify(request);
+			if (!verified.isSuccess()) {
+				WebhookResponse resp;
+				resp.statusCode = 401;
+				resp.body = R"({"error":"webhook signature verification failed"})";
+				resp.messageType = WebhookMessageType::Unknown;
+				return resp;
+			}
+		}
+		return processWebhook(request);
+	}
+
+	WebhookResponse Client::processWebhook(const WebhookRequest& request) {
 		WebhookResponse resp;
 
 		nlohmann::json body;
 		try {
-			body = json_utils::parse(rawBody);
+			body = json_utils::parse(request.body);
 		}
 		catch (const std::exception&) {
 			resp.statusCode = 400;

@@ -49,21 +49,6 @@ TEST_CASE("Resource getters return empty without a token (no network)", "[client
 	REQUIRE(client.getRooms("loc").empty());
 }
 
-TEST_CASE("A configured token-refresh callback does not fire without a token (no network)", "[client]") {
-	Client client(PollingMode::Manual);
-	bool callback_invoked = false;
-	client.setTokenRefreshCallback([&]() -> Result<std::string> {
-		callback_invoked = true;
-		return Result<std::string>(std::string("new-token"));
-	});
-
-	// These fast-path on the "no token configured" check before ever reaching
-	// getWithAuth()/postWithAuth(), so the refresh callback must stay unused.
-	REQUIRE_FALSE(client.validateAuthentication().isSuccess());
-	REQUIRE(client.getDevices().empty());
-	REQUIRE_FALSE(callback_invoked);
-}
-
 TEST_CASE("pollNow() with no registered devices is a no-op", "[client][polling]") {
 	Client client(PollingMode::Manual);
 	client.pollNow();
