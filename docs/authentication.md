@@ -17,6 +17,7 @@ are two ways to get one, and the choice shapes everything downstream:
   - [Step 2 — The autonomous Client](#step-2--the-autonomous-client)
   - [Token persistence](#token-persistence)
   - [The manual OAuth flow](#the-manual-oauth-flow)
+  - [Bring your own tokens](#bring-your-own-tokens)
 - [Personal Access Tokens (discouraged)](#personal-access-tokens-discouraged)
 - [Transparent token refresh](#transparent-token-refresh)
 - [Security notes](#security-notes)
@@ -179,6 +180,74 @@ Refresh later with `authenticator.refresh(refreshToken)` — and always persist
 the *new* refresh token that comes back, because SmartThings may rotate it.
 The [`oauth2_authentication` example](examples.md#oauth2_authentication) is a
 complete working version of this flow, including persistence to a JSON file.
+
+### Bring your own tokens
+
+The manual flow above leaves you with a plain polling `Client`. If your
+application runs OAuth itself (it builds the authorize URL, receives the
+redirect, exchanges the code, keeps and refreshes the tokens) **and** wants
+real push events, use the *external-tokens* OAuth mode instead. It does
+everything the autonomous OAuth client does except the OAuth flow:
+
+| The library still does | Your application does |
+|---|---|
+| Webhook handling: PING, CONFIRMATION, INSTALL/UPDATE, EVENT, UNINSTALL | The OAuth flow: authorize URL, redirect, code exchange |
+| [HTTP-Signature verification](webhook-security.md) (on by default) | Storing and refreshing tokens |
+| Installed-app id capture (from `setAccessToken()` or the webhook) | Receiving the webhook POST and handing it over (`IHttpServer`) |
+| Automatic per-device subscriptions, adopted across runs | Calling `setAccessToken()` with every new token |
+| Device events dispatched onto your `Device` objects | Refreshing when told a token was rejected |
+
+No client secret, no keychain and no polling are involved:
+
+```cpp
+Client client(ExternalTokens{},
+    std::make_unique<MyGatewayServer>(),   // IHttpServer (may be null, see below)
+    std::make_unique<MyStateStore>());     // IStorageProvider for the installed-app id
+
+client.accessTokenRejected += [&](std::string rejected) {
+    myOAuth.refreshAsync();                // never block here waiting for it
+};
+client.authenticationCompleted += [](Result<void>) { /* first token arrived */ };
+
+// At startup, and again after every refresh:
+client.setAccessToken(token.access, token.installedAppId);
+```
+
+The SmartThings token response carries `installed_app_id`; pass it as the
+second argument so subscriptions can start before any webhook arrives (an empty
+value keeps the current id).
+
+How each piece behaves in this mode:
+
+- **`setAccessToken(token, installedAppId)`** is thread-safe and never blocks:
+  call it from any thread, as often as you like. The token is used by the very
+  next request. Persisting the id, flushing the subscriptions that were waiting
+  for a token, and firing `authenticationCompleted` (once per sign-in, not for
+  each refreshed token) happen on the client's internal worker thread.
+- **An empty token signs the client out.** Calls then fail with
+  `ErrorCode::AuthenticationRequired` (getters return empty results); nothing is
+  deleted: the installed-app id, the subscriptions and your `Device` objects
+  stay, and pushed events keep flowing to them. The next token signs it back in.
+- **`accessTokenRejected`** fires when the API answers 401 for the current
+  token, once per token (setting a token again re-arms it), on the worker
+  thread, so the handler may call back into the client. The library never
+  waits for a new token: the request that got the 401 returns its error at
+  once (`ErrorCode::AuthenticationFailed` for commands). If you already
+  supplied a newer token while that request was in flight, it is retried once
+  with it. Subscriptions that failed are retried when the next token arrives.
+- **`authenticate()`** runs nothing and never fires `openBrowserRequested`: it
+  returns `true` if a token is set, `false` if not. **`waitForAuthentication()`**
+  never waits: success if a token is set, `AuthenticationRequired` otherwise.
+- **The `IHttpServer`** is bound and started as usual, but only its webhook
+  route is used; `fullOAuthCallbackUri()` is never called. Pass `nullptr` if
+  you deliver webhook requests yourself through
+  `handleWebhook(const WebhookRequest&)`, which verifies the signature too.
+
+> [!IMPORTANT]
+> Because no call ever blocks waiting for a token, you can safely call the
+> client from the same thread that will produce the next token. Do refresh
+> asynchronously, though: a handler that blocks holds up the worker's other
+> jobs, and must never wait on the thread that destroys the `Client`.
 
 ---
 

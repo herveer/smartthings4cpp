@@ -284,7 +284,12 @@ If you drive `pollNow()` or `subscribeTo()` yourself in a tight loop, expect
 
 - polling mode → the background polling thread (or *your* thread for a manual
   `pollNow()`);
-- OAuth mode → the embedded server's thread.
+- OAuth mode → the embedded server's thread (or, with an injected
+  `IHttpServer`, whichever thread calls into it).
+
+In the [external-tokens mode](authentication.md#bring-your-own-tokens),
+`authenticationCompleted` and `accessTokenRejected` fire on the client's own
+worker thread, never inside the call that triggered them.
 
 Attribute storage is not synchronized against concurrent access. If your
 handler touches state shared with other threads — or anything thread-affine

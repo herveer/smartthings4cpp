@@ -178,6 +178,9 @@ namespace smartthings4cpp {
 			if (response.isSuccess()) {
 				return Result<Subscription>(parseSubscription(json_utils::parse(response.body)));
 			}
+			if (response.status_code == 401) {
+				reportRejectedToken(token);
+			}
 			return subscriptionError<Subscription>(response, "subscribeTo");
 		}
 		catch (const std::exception& e) {
@@ -239,6 +242,9 @@ namespace smartthings4cpp {
 				_base_url + "/installedapps/" + appId + "/subscriptions", authHeadersFor(token));
 
 			if (!response.isSuccess()) {
+				if (response.status_code == 401) {
+					reportRejectedToken(token);
+				}
 				return subscriptionError<std::vector<Subscription>>(response, "listSubscriptions");
 			}
 
@@ -285,6 +291,9 @@ namespace smartthings4cpp {
 			if (response.isSuccess()) {
 				return Result<void>();
 			}
+			if (response.status_code == 401) {
+				reportRejectedToken(token);
+			}
 			return subscriptionError<void>(response, "deleteSubscription");
 		}
 		catch (const std::exception& e) {
@@ -316,6 +325,9 @@ namespace smartthings4cpp {
 
 			if (response.isSuccess()) {
 				return Result<void>();
+			}
+			if (response.status_code == 401) {
+				reportRejectedToken(token);
 			}
 			return subscriptionError<void>(response, "deleteAllSubscriptions");
 		}
@@ -647,8 +659,14 @@ namespace smartthings4cpp {
 			pending.assign(_pendingSubscriptions.begin(), _pendingSubscriptions.end());
 			_pendingSubscriptions.clear();
 		}
-		for (const auto& deviceId : pending) {
-			maybeSubscribeDevice(deviceId); // re-parks itself on failure
+		for (size_t i = 0; i < pending.size(); ++i) {
+			if (_workerStop.load()) {
+				// The Client is being destroyed: leave the rest parked.
+				std::lock_guard<std::mutex> lock(_subscriptionMutex);
+				_pendingSubscriptions.insert(pending.begin() + static_cast<std::ptrdiff_t>(i), pending.end());
+				return;
+			}
+			maybeSubscribeDevice(pending[i]); // re-parks itself on failure
 		}
 	}
 

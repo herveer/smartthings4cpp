@@ -63,6 +63,36 @@ auto sub = device->PropertyChanged.SubscribeScoped(
 | 🔏 **Verified webhooks** | Every inbound webhook's HTTP-Signature is cryptographically checked against SmartThings' published public key before the event is acted on — on by default. |
 | 🔧 **Escape hatches everywhere** | Everything automatic is also injectable: bring your own `IHttpServer`, `IStorageProvider`, or `IWebhookSignatureVerifier` when the defaults don't fit. |
 
+## Bring your own tokens
+
+Already running OAuth yourself — your own authorize URL, redirect handler,
+code exchange and refresh? Construct the client with `ExternalTokens{}` and
+hand it each access token. It keeps everything else the OAuth client does:
+webhook handling (PING / CONFIRMATION / EVENT, HTTP-Signature verification,
+installed-app id capture), automatic per-device subscriptions and pushed device
+events. It never stores, refreshes or waits for a token, and needs no client
+secret and no keychain.
+
+```cpp
+Client client(ExternalTokens{},
+    std::make_unique<MyGatewayServer>(),   // IHttpServer: your webhook route (its OAuth route is unused)
+    std::make_unique<MyStateStore>());     // IStorageProvider: plain state (installed-app id)
+
+// A 401 for the current token: refresh asynchronously, then hand the new one in.
+client.accessTokenRejected += [&](std::string rejected) { myOAuth.refreshAsync(); };
+
+// At startup and after every refresh - from any thread, never blocks:
+client.setAccessToken(token.access, token.installedAppId);
+
+client.setAccessToken("");                 // signed out: calls fail, nothing is deleted
+```
+
+`setAccessToken()` adopts the token at once; pending subscriptions are flushed
+and `authenticationCompleted` fires on the client's own worker thread, never
+on yours. The request that got a 401 returns its error right away, and
+`accessTokenRejected` fires once per rejected token. Details in
+[Authentication](docs/authentication.md#bring-your-own-tokens).
+
 ## Documentation
 
 The full documentation lives in [`docs/`](docs/README.md):
@@ -70,7 +100,7 @@ The full documentation lives in [`docs/`](docs/README.md):
 | Guide | What it covers |
 |---|---|
 | 📦 [Getting started](docs/getting-started.md) | Requirements, building with CMake + vcpkg, using the library in your own project, your first program |
-| 🔑 [Authentication](docs/authentication.md) | OAuth (recommended) and Personal Access Tokens (discouraged — they expire after 24 h), token persistence, transparent refresh |
+| 🔑 [Authentication](docs/authentication.md) | OAuth (recommended), bringing your own OAuth tokens, and Personal Access Tokens (discouraged — they expire after 24 h), token persistence, transparent refresh |
 | 🏠 [Devices & capabilities](docs/device-model.md) | The `Client → Device → Component → Capability` model, typed capability lookup, reactive properties, commands, error handling |
 | ⚡ [Live updates](docs/live-updates.md) | Background polling, real push over webhooks, and a complete **ngrok walkthrough** from zero to pushed events |
 | 🔏 [Webhook security](docs/webhook-security.md) | How inbound webhooks are cryptographically verified, and how to customize it |

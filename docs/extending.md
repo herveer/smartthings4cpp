@@ -27,6 +27,17 @@ Client client(config,
 …except the verifier, which is swappable at any time via
 `client.setWebhookSignatureVerifier(...)`.
 
+If your application runs OAuth itself, the external-tokens constructor takes
+just the server and the plain-state store, with no `OAuth2Config` and no
+secret store; you supply tokens with `setAccessToken()` (see
+[Bring your own tokens](authentication.md#bring-your-own-tokens)):
+
+```cpp
+Client client(ExternalTokens{},
+    std::make_unique<MyHttpServer>(...),     // IHttpServer (webhook route only)
+    std::make_unique<MyStateStore>(...));    // IStorageProvider (plain state)
+```
+
 ---
 
 ## IHttpServer

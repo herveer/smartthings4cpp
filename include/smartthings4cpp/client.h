@@ -58,11 +58,23 @@ namespace smartthings4cpp {
 	namespace oauth2 { class OAuth2Authenticator; }
 
 	/**
+	 * @brief Tag selecting the "external tokens" OAuth mode of Client
+	 *
+	 * Pass @c ExternalTokens{} as the first argument of the matching Client
+	 * constructor to get an OAuth-mode Client whose tokens are supplied by the
+	 * application (see Client::setAccessToken()) instead of being obtained,
+	 * stored and refreshed by the library.
+	 */
+	struct ExternalTokens {
+		explicit ExternalTokens() = default;
+	};
+
+	/**
 	 * @brief Main entry point for interacting with a SmartThings account
 	 *
 	 * Unlike a local Hue bridge, SmartThings is a cloud service: there is no
 	 * network discovery and no link-button pairing. The Client talks to
-	 * https://api.smartthings.com/v1 and comes in two flavors, chosen by
+	 * https://api.smartthings.com/v1 and comes in three flavors, chosen by
 	 * constructor:
 	 *
 	 * - **PAT mode** - construct with a Personal Access Token. Live updates
@@ -75,8 +87,13 @@ namespace smartthings4cpp {
 	 *   and manages device event subscriptions automatically - each Device it
 	 *   hands out is subscribed on creation and unsubscribed when the last
 	 *   Device object for that id is destroyed. No polling.
+	 * - **External-tokens OAuth mode** - construct with ExternalTokens{}. The
+	 *   same push events and automatic subscriptions as OAuth mode, but the
+	 *   application runs the OAuth flow itself and hands each access token in
+	 *   with setAccessToken(); the library never stores, refreshes or waits
+	 *   for a token, and reports a rejected one through accessTokenRejected.
 	 *
-	 * In both modes the Client discovers devices (with their components and
+	 * In every mode the Client discovers devices (with their components and
 	 * capabilities), locations and rooms, and updates arrive through the same
 	 * reactive PropertyChanged events.
 	 */
@@ -149,6 +166,42 @@ namespace smartthings4cpp {
 			std::unique_ptr<IStorageProvider> storageProvider);
 
 		/**
+		 * @brief Construct an OAuth Client whose tokens come from the application
+		 *
+		 * For apps that already run OAuth themselves (build the authorize URL,
+		 * receive the redirect, exchange the code, keep and refresh tokens). The
+		 * Client does everything else an OAuth-mode Client does: it handles the
+		 * webhook (PING/CONFIRMATION/EVENT/INSTALL/...), verifies each request's
+		 * HTTP-Signature (the default verifier is installed, as in OAuth mode),
+		 * captures the installed-app id, creates and deletes per-device event
+		 * subscriptions automatically and dispatches device events. It never runs
+		 * the OAuth flow, never stores tokens and never refreshes them: no
+		 * client secret and no keychain are involved.
+		 *
+		 * Feed it tokens with setAccessToken() - at startup and after every
+		 * refresh - and react to accessTokenRejected by refreshing (asynchronously)
+		 * and calling setAccessToken() again. No background polling, as in OAuth
+		 * mode (startPolling() remains available).
+		 *
+		 * Example:
+		 * @code
+		 * Client client(ExternalTokens{}, std::make_unique<MyGatewayServer>(),
+		 *     std::make_unique<MyStateStore>());
+		 * client.accessTokenRejected += [&](std::string) { myOAuth.refreshAsync(); };
+		 * myOAuth.onToken([&](const Token& t) { client.setAccessToken(t.access, t.installedAppId); });
+		 * @endcode
+		 * @param httpServer Receives the webhook requests; Client binds and
+		 *        starts it. Its OAuth route is never used and
+		 *        fullOAuthCallbackUri() is never called. May be null if you
+		 *        deliver webhook requests yourself through
+		 *        handleWebhook(const WebhookRequest&).
+		 * @param storageProvider Plain state storage (the installed-app id);
+		 *        may be null to keep that state in memory only
+		 */
+		Client(ExternalTokens, std::unique_ptr<IHttpServer> httpServer,
+			std::unique_ptr<IStorageProvider> storageProvider);
+
+		/**
 		 * @brief Destructor
 		 *
 		 * Stops the background polling thread (if running) before the rest of
@@ -171,9 +224,33 @@ namespace smartthings4cpp {
 
 		/**
 		 * @brief Set the access token used to authenticate API requests
-		 * @param token A SmartThings OAuth 2.0 Bearer token (PAT)
+		 *
+		 * Thread-safe in every mode, callable from any thread any number of
+		 * times, and never performs network I/O.
+		 *
+		 * - **PAT / OAuth mode** - replaces the token used by subsequent requests
+		 *   (and records @p installedAppId when non-empty, writing it to the
+		 *   plain storage). Nothing else happens.
+		 * - **External-tokens mode** (see the ExternalTokens constructor) - this
+		 *   is how the application signs the Client in and keeps it signed in,
+		 *   and it never blocks: the token is adopted at once and
+		 *   @p installedAppId (SmartThings' token response carries
+		 *   @c installed_app_id) is recorded when non-empty; then, on the
+		 *   Client's internal worker thread and never on the caller's, the id
+		 *   is persisted, pending automatic device subscriptions are flushed
+		 *   and, when this token signs the Client in (the first token, or the
+		 *   first one after a sign-out), authenticationCompleted fires with
+		 *   success. Call it again with every refreshed token.
+		 *   An empty @p token signs the Client out: API calls then fail with
+		 *   ErrorCode::AuthenticationRequired (getters return empty), and
+		 *   nothing is deleted - the installed-app id, subscriptions and
+		 *   Devices stay as they are until a new token arrives.
+		 * @param token A SmartThings OAuth 2.0 Bearer token (PAT or OAuth access
+		 *        token), or empty to sign out
+		 * @param installedAppId The installed-app id this token belongs to, or
+		 *        empty to keep the current one
 		 */
-		void setAccessToken(const std::string& token);
+		void setAccessToken(const std::string& token, const std::string& installedAppId = {});
 
 		/**
 		 * @brief Get the currently configured access token
@@ -336,6 +413,9 @@ namespace smartthings4cpp {
 		//   client.openBrowserRequested += [](std::string url) { /* open it */ };
 		//   client.authenticate();
 		//   client.waitForAuthentication(std::chrono::minutes(5));
+		// In external-tokens mode the app supplies tokens instead:
+		//   client.accessTokenRejected += [](std::string) { /* refresh, async */ };
+		//   client.setAccessToken(token, installedAppId); // at start + each refresh
 		// The subscription/webhook methods further below are escape hatches -
 		// normal consumers never call them.
 
@@ -356,9 +436,37 @@ namespace smartthings4cpp {
 		 * Success after the browser round-trip (or a silent token refresh);
 		 * an error Result if the exchange/refresh failed (e.g. consent denied,
 		 * CSRF state mismatch, network failure).
-		 * @note Fires on the HTTP server's thread for the browser flow.
+		 * In external-tokens mode: fires (always with success) when
+		 * setAccessToken() signs the Client in - the first token, or the first
+		 * one after a sign-out - but not for later refreshed tokens.
+		 * @note Fires on the HTTP server's thread for the browser flow, and on
+		 *       the Client's internal worker thread in external-tokens mode.
 		 */
 		ReactiveLitepp::Event<Result<void>> authenticationCompleted;
+
+		/**
+		 * @brief Fired when the API rejects (HTTP 401) the current external token
+		 *
+		 * External-tokens mode only (never fired in PAT or OAuth mode, where
+		 * the library handles 401s itself). The argument is the rejected token,
+		 * so a handler that has already moved on to a newer token can ignore a
+		 * late report. Fired at most once per token: further 401s for the same
+		 * token stay silent until setAccessToken() supplies a token again (even
+		 * the same one). A report is dropped if the token was replaced before
+		 * it could be delivered.
+		 *
+		 * The library never waits for a new token: the request that got the 401
+		 * returns its error (ErrorCode::AuthenticationFailed, or an empty
+		 * result for getters) right away, and pending automatic subscriptions
+		 * are retried once setAccessToken() delivers the next token. Refresh
+		 * asynchronously and call setAccessToken() with the result.
+		 * @note Fires on the Client's internal worker thread, never inside the
+		 *       call that received the 401, so the handler may call back into
+		 *       the Client (including setAccessToken()). Keep it short: it
+		 *       delays the worker's other jobs, and must not wait on the thread
+		 *       destroying the Client.
+		 */
+		ReactiveLitepp::Event<std::string> accessTokenRejected;
 
 		/**
 		 * @brief Make this OAuth Client authenticated, as silently as possible
@@ -368,16 +476,27 @@ namespace smartthings4cpp {
 		 * interactive flow - firing openBrowserRequested and returning
 		 * immediately. Call once at startup; tokens persisting across runs
 		 * means the browser typically only opens the very first time.
+		 *
+		 * In external-tokens mode there is nothing to run: the Client is
+		 * authenticated if and only if setAccessToken() supplied a token. This
+		 * returns @c true or @c false accordingly, without any network call and
+		 * without ever firing openBrowserRequested.
 		 * @return On success, @c true if authenticated right now, @c false if
 		 *         the browser step is pending (wait via waitForAuthentication()
-		 *         or authenticationCompleted). An error Result if this isn't an
-		 *         OAuth Client, the server failed to start, or a refresh failed
-		 *         for a reason consent can't fix (e.g. network down).
+		 *         or authenticationCompleted) - or, in external-tokens mode, if
+		 *         no token has been supplied yet. An error Result if this isn't
+		 *         an OAuth Client, the server failed to start, or a refresh
+		 *         failed for a reason consent can't fix (e.g. network down).
 		 */
 		Result<bool> authenticate();
 
 		/**
 		 * @brief Block until the pending authentication finishes (or times out)
+		 *
+		 * In external-tokens mode this never blocks (a token can only come from
+		 * the application itself, so waiting could deadlock it): it returns at
+		 * once with success if a token is set, or ErrorCode::AuthenticationRequired
+		 * if not. Observe authenticationCompleted to learn when a token arrives.
 		 * @param timeout Maximum time to wait for the browser round-trip
 		 * @return The outcome (TimeoutError if nothing completed in time)
 		 */
@@ -522,7 +641,9 @@ namespace smartthings4cpp {
 		// OAuth-mode collaborators (all null on a PAT Client). The server runs
 		// its own thread and calls back into this Client (onOAuthRedirect /
 		// handleWebhook), so ~Client stops it before tearing anything else down.
+		// _externalTokens implies _isOAuth, with no authenticator and no keychain.
 		bool _isOAuth = false;
+		bool _externalTokens = false;
 		oauth2::OAuth2Config _oauthConfig;
 		std::unique_ptr<oauth2::OAuth2Authenticator> _authenticator;
 		std::unique_ptr<IHttpServer> _httpServer;
@@ -555,6 +676,25 @@ namespace smartthings4cpp {
 		std::unordered_map<std::string, std::string> _unclaimedSubscriptions; // prior-run leftovers to adopt
 		bool _unclaimedLoaded = false;
 
+		// External-tokens mode: the last token reported through
+		// accessTokenRejected (cleared by setAccessToken()), so a token is
+		// reported once, not once per failing request. Guarded by _authMutex.
+		mutable std::string _rejectedToken;
+
+		// External-tokens mode: a worker thread runs everything setAccessToken()
+		// and the 401 path must not do on the caller's thread - storage writes,
+		// subscription flushes (network) and consumer event handlers - so that
+		// neither ever blocks. Jobs are coalesced flags; all guarded by
+		// _workerMutex (_workerStop is atomic so long loops can poll it).
+		std::thread _worker;
+		mutable std::mutex _workerMutex;
+		mutable std::condition_variable _workerCv;
+		std::atomic<bool> _workerStop{ false };
+		bool _workerFlush = false;                      // flush pending subscriptions
+		bool _workerAnnounce = false;                   // fire authenticationCompleted(success)
+		std::optional<std::string> _workerPersistAppId; // installed-app id to write to _storage
+		mutable std::vector<std::string> _workerRejected; // tokens to report via accessTokenRejected
+
 		// Lets the shared_ptr<Device> custom deleter reach back into this Client
 		// safely: the deleter holds a weak_ptr to this hub, and ~Client disarms
 		// it, so a Device destroyed after its Client is a silent no-op instead
@@ -577,10 +717,33 @@ namespace smartthings4cpp {
 		/// configured, invokes it once and retries this same request once before
 		/// returning. Every authenticated GET in this class routes through here
 		/// so the retry is centralized instead of duplicated per method.
+		/// In external-tokens mode a 401 never waits for anything: the request
+		/// is retried once only if setAccessToken() already supplied a newer
+		/// token meanwhile, and a still-rejected token is reported through
+		/// accessTokenRejected (see reportRejectedToken()).
 		HttpResponse getWithAuth(const std::string& url) const;
 
 		/// POST equivalent of getWithAuth().
 		HttpResponse postWithAuth(const std::string& url, const std::string& body) const;
+
+		/// The shared 401 policy behind getWithAuth()/postWithAuth(): @p send
+		/// performs the request with the given auth headers (possibly twice).
+		HttpResponse sendWithAuth(
+			const std::function<HttpResponse(const std::map<std::string, std::string>& headers)>& send) const;
+
+		/// _access_token read under _authMutex.
+		std::string currentAccessToken() const;
+
+		/// External-tokens mode: queue an accessTokenRejected report for
+		/// @p token if it is still the current token and not reported yet.
+		/// Non-blocking; a no-op in the other modes and for an empty token.
+		void reportRejectedToken(const std::string& token) const;
+
+		/// External-tokens mode worker: runs the queued jobs (see _worker).
+		void workerLoop();
+
+		/// Stop and join the worker (no-op if it never started).
+		void stopWorker();
 
 		/// Under _registryMutex: locks every weak_ptr in the registry, pruning
 		/// (and dropping empty buckets for) any device id with no survivors, and

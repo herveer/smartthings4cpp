@@ -14,6 +14,7 @@ set(TEST_SOURCES
     webhook_signature_tests.cpp
     storage_tests.cpp
     http_server_tests.cpp
+    external_tokens_tests.cpp
 )
 
 # Create test executable

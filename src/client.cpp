@@ -157,6 +157,43 @@ namespace smartthings4cpp {
 		// No background polling in OAuth mode: webhook events drive updates.
 	}
 
+	Client::Client(ExternalTokens, std::unique_ptr<IHttpServer> httpServer,
+		std::unique_ptr<IStorageProvider> storageProvider)
+		: _isOAuth(true),
+		_externalTokens(true),
+		_httpServer(std::move(httpServer)),
+		_storage(std::move(storageProvider)) {
+		_lifetimeHub = std::make_shared<DeviceLifetimeHub>();
+		_lifetimeHub->client = this;
+
+		// Same out-of-the-box webhook verification as the other OAuth mode.
+		_webhookVerifier = makeDefaultWebhookSignatureVerifier();
+
+		// Only plain state to rehydrate: tokens are the application's business.
+		if (_storage) {
+			if (auto appId = _storage->getValue("installedAppId")) {
+				std::lock_guard<std::mutex> lock(_installMutex);
+				_installedAppId = *appId;
+			}
+		}
+
+		_serverStart = Result<void>(); // a null server is fine: handleWebhook() is fed directly
+		if (_httpServer) {
+			_httpServer->bind(
+				[](std::string) {
+					// The application runs OAuth itself: this route is never used.
+				},
+				[this](const WebhookRequest& request) -> WebhookResponse {
+					return handleWebhook(request); // verifying overload
+				});
+			_serverStart = _httpServer->start();
+		}
+
+		// Last, so nothing above can throw with a joinable thread around.
+		_worker = std::thread([this]() { workerLoop(); });
+		// No background polling, as in OAuth mode: webhook events drive updates.
+	}
+
 	Client::~Client() {
 		// Stop inbound callbacks first: the server thread calls back into this
 		// Client (handleWebhook/onOAuthRedirect), so it must be quiet before
@@ -164,6 +201,7 @@ namespace smartthings4cpp {
 		if (_httpServer) {
 			_httpServer->stop();
 		}
+		stopWorker();
 		stopPolling();
 
 		// Disarm the deleter hub: a Device destroyed after this point no-ops.
@@ -190,15 +228,59 @@ namespace smartthings4cpp {
 		}
 	}
 
-	void Client::setAccessToken(const std::string& token) {
-		_access_token = token;
+	void Client::setAccessToken(const std::string& token, const std::string& installedAppId) {
+		if (!_externalTokens) {
+			{
+				std::lock_guard<std::mutex> lock(_authMutex);
+				_access_token = token;
+			}
+			adoptInstalledAppId(installedAppId); // no-op when empty
+			return;
+		}
+
+		// External-tokens mode: adopt synchronously (cheap, lock-only), then
+		// hand everything that may block - storage, network, consumer
+		// handlers - to the worker, so this never blocks its caller.
+		bool signsIn = false;
+		{
+			std::lock_guard<std::mutex> lock(_authMutex);
+			signsIn = _access_token.empty() && !token.empty();
+			_access_token = token;
+			_rejectedToken.clear(); // a (re)supplied token may be reported again
+		}
+		if (!installedAppId.empty()) {
+			std::lock_guard<std::mutex> lock(_installMutex);
+			_installedAppId = installedAppId;
+		}
+		{
+			std::lock_guard<std::mutex> lock(_workerMutex);
+			if (!installedAppId.empty()) {
+				_workerPersistAppId = installedAppId;
+			}
+			if (token.empty()) {
+				_workerAnnounce = false; // signed out before the sign-in was announced
+			}
+			else {
+				_workerFlush = true;
+				if (signsIn) {
+					_workerAnnounce = true;
+				}
+			}
+		}
+		_workerCv.notify_one();
 	}
 
 	std::string Client::getAccessToken() const {
+		return currentAccessToken();
+	}
+
+	std::string Client::currentAccessToken() const {
+		std::lock_guard<std::mutex> lock(_authMutex);
 		return _access_token;
 	}
 
 	bool Client::isAuthenticated() const {
+		std::lock_guard<std::mutex> lock(_authMutex);
 		return !_access_token.empty();
 	}
 
@@ -217,65 +299,87 @@ namespace smartthings4cpp {
 		};
 	}
 
-	HttpResponse Client::getWithAuth(const std::string& url) const {
-		HttpClient client;
-		client.setTimeout(REQUEST_TIMEOUT);
+	HttpResponse Client::sendWithAuth(
+		const std::function<HttpResponse(const std::map<std::string, std::string>& headers)>& send) const {
+		std::string tokenSnapshot = currentAccessToken();
 
-		std::string tokenSnapshot;
-		{
-			std::lock_guard<std::mutex> lock(_authMutex);
-			tokenSnapshot = _access_token;
+		auto response = send(authHeadersFor(tokenSnapshot));
+		if (response.status_code != 401) {
+			return response;
 		}
 
-		auto response = client.get(url, authHeadersFor(tokenSnapshot));
-		if (response.status_code == 401 && _token_refresh_callback) {
+		if (_externalTokens) {
+			// Tokens come from the application, asynchronously: never wait for
+			// one (the caller may be the very thread that would produce it) and
+			// never hold _authMutex across a request (setAccessToken() must not
+			// block). Retry once only if a newer token already arrived while
+			// this request was in flight.
+			const std::string current = currentAccessToken();
+			if (!current.empty() && current != tokenSnapshot) {
+				tokenSnapshot = current;
+				response = send(authHeadersFor(tokenSnapshot));
+			}
+			if (response.status_code == 401) {
+				reportRejectedToken(tokenSnapshot);
+			}
+			return response;
+		}
+
+		if (_token_refresh_callback) {
 			std::lock_guard<std::mutex> lock(_authMutex);
 			if (_access_token != tokenSnapshot) {
 				// Another thread already refreshed while our request was in
 				// flight; just retry with the token that's current now instead
 				// of refreshing a second time for the same expiry event.
-				response = client.get(url, authHeadersFor(_access_token));
+				response = send(authHeadersFor(_access_token));
 			}
 			else {
 				auto refreshed = _token_refresh_callback();
 				if (refreshed.isSuccess() && refreshed.hasValue()) {
 					_access_token = *refreshed.value;
-					response = client.get(url, authHeadersFor(_access_token));
+					response = send(authHeadersFor(_access_token));
 				}
 			}
 		}
 		return response;
+	}
+
+	HttpResponse Client::getWithAuth(const std::string& url) const {
+		HttpClient client;
+		client.setTimeout(REQUEST_TIMEOUT);
+		return sendWithAuth([&](const std::map<std::string, std::string>& headers) {
+			return client.get(url, headers);
+			});
 	}
 
 	HttpResponse Client::postWithAuth(const std::string& url, const std::string& body) const {
 		HttpClient client;
 		client.setTimeout(REQUEST_TIMEOUT);
+		return sendWithAuth([&](const std::map<std::string, std::string>& headers) {
+			return client.post(url, body, headers);
+			});
+	}
 
-		std::string tokenSnapshot;
+	void Client::reportRejectedToken(const std::string& token) const {
+		if (!_externalTokens || token.empty()) {
+			return;
+		}
 		{
 			std::lock_guard<std::mutex> lock(_authMutex);
-			tokenSnapshot = _access_token;
-		}
-
-		auto response = client.post(url, body, authHeadersFor(tokenSnapshot));
-		if (response.status_code == 401 && _token_refresh_callback) {
-			std::lock_guard<std::mutex> lock(_authMutex);
-			if (_access_token != tokenSnapshot) {
-				response = client.post(url, body, authHeadersFor(_access_token));
+			if (token != _access_token || token == _rejectedToken) {
+				return; // already replaced, or already reported
 			}
-			else {
-				auto refreshed = _token_refresh_callback();
-				if (refreshed.isSuccess() && refreshed.hasValue()) {
-					_access_token = *refreshed.value;
-					response = client.post(url, body, authHeadersFor(_access_token));
-				}
-			}
+			_rejectedToken = token;
 		}
-		return response;
+		{
+			std::lock_guard<std::mutex> lock(_workerMutex);
+			_workerRejected.push_back(token);
+		}
+		_workerCv.notify_one();
 	}
 
 	Result<void> Client::validateAuthentication() const {
-		if (_access_token.empty()) {
+		if (!isAuthenticated()) {
 			return Result<void>(ErrorCode::AuthenticationRequired,
 				"No access token set");
 		}
@@ -699,6 +803,10 @@ namespace smartthings4cpp {
 		if (!_serverStart.isSuccess()) {
 			return Result<bool>(_serverStart.error, _serverStart.error_message);
 		}
+		if (_externalTokens) {
+			// Nothing to run: tokens only ever come from setAccessToken().
+			return Result<bool>(isAuthenticated());
+		}
 
 		if (auto stored = loadPersistedOAuthToken()) {
 			// 1. Still-valid access token: nothing to do.
@@ -715,7 +823,10 @@ namespace smartthings4cpp {
 					completeAuthentication(Result<void>());
 					return Result<bool>(true);
 				}
-				_access_token = "";
+				{
+					std::lock_guard<std::mutex> lock(_authMutex);
+					_access_token.clear();
+				}
 
 				if (validateAuthenticationResult.error == ErrorCode::AuthenticationFailed) {
 					stored = oauth2::OAuth2Token();
@@ -758,6 +869,15 @@ namespace smartthings4cpp {
 		if (!_isOAuth) {
 			return Result<void>(ErrorCode::InvalidRequest,
 				"waitForAuthentication() requires an OAuth-mode Client");
+		}
+		if (_externalTokens) {
+			// Never wait: the token can only come from the application itself,
+			// possibly from this very thread.
+			if (isAuthenticated()) {
+				return Result<void>();
+			}
+			return Result<void>(ErrorCode::AuthenticationRequired,
+				"No access token: supply one with setAccessToken()");
 		}
 		std::unique_lock<std::mutex> lock(_authWaitMutex);
 		if (!_authWaitCv.wait_for(lock, timeout, [this]() { return _authFinished; })) {
@@ -867,6 +987,65 @@ namespace smartthings4cpp {
 		}
 		_authWaitCv.notify_all();
 		authenticationCompleted.Notify(outcome);
+	}
+
+	// --- external-tokens worker ---------------------------------------------
+
+	void Client::workerLoop() {
+		std::unique_lock<std::mutex> lock(_workerMutex);
+		for (;;) {
+			_workerCv.wait(lock, [this]() {
+				return _workerStop.load() || _workerFlush || _workerAnnounce
+					|| _workerPersistAppId.has_value() || !_workerRejected.empty();
+				});
+
+			// Take every queued job at once (they coalesce), then run them
+			// unlocked so setAccessToken() never waits on this thread.
+			std::optional<std::string> persistAppId = std::move(_workerPersistAppId);
+			_workerPersistAppId.reset();
+			const bool flush = std::exchange(_workerFlush, false);
+			const bool announce = std::exchange(_workerAnnounce, false);
+			std::vector<std::string> rejected;
+			rejected.swap(_workerRejected);
+			const bool stopping = _workerStop.load();
+			lock.unlock();
+
+			// Persisting the installed-app id is kept even when stopping, so
+			// one supplied just before destruction is not lost.
+			if (persistAppId && _storage) {
+				_storage->setValue("installedAppId", *persistAppId);
+			}
+			if (stopping) {
+				return;
+			}
+
+			for (const auto& token : rejected) {
+				if (token == currentAccessToken()) { // drop reports overtaken by a new token
+					accessTokenRejected.Notify(token);
+				}
+			}
+			// Same order as a completed browser flow: subscriptions, then the event.
+			if (flush && isAuthenticated()) {
+				flushPendingSubscriptions();
+			}
+			if (announce && isAuthenticated()) {
+				completeAuthentication(Result<void>());
+			}
+
+			lock.lock();
+		}
+	}
+
+	void Client::stopWorker() {
+		if (!_worker.joinable()) {
+			return;
+		}
+		{
+			std::lock_guard<std::mutex> lock(_workerMutex);
+			_workerStop = true;
+		}
+		_workerCv.notify_all();
+		_worker.join();
 	}
 
 } // namespace smartthings4cpp
